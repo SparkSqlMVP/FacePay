@@ -1,0 +1,20 @@
+﻿<Window x:Class="FaceID.InputNumber"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:FaceID"
+        mc:Ignorable="d"
+        Title="输入手机号" Height="300" Width="300">
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="77*"/>
+            <ColumnDefinition Width="218*"/>
+        </Grid.ColumnDefinitions>
+
+        <TextBox  Name="PhoneNumber" HorizontalAlignment="Left"      Height="23" Margin="42,67,0,0" TextWrapping="Wrap"  VerticalAlignment="Top" Width="120" Grid.ColumnSpan="2"/>
+        <Button Content="确认" HorizontalAlignment="Left" Margin="112.713,67,0,0" VerticalAlignment="Top" Width="75" Click="Button_Click" Grid.Column="1"/>
+        <Label Content="手机默认后4位" HorizontalAlignment="Left" Margin="42,36,0,0" VerticalAlignment="Top" Width="120" Grid.ColumnSpan="2"/>
+
+    </Grid>
+</Window>
