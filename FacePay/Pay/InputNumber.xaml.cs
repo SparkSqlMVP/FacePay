@@ -54,7 +54,7 @@ namespace FaceID
 
                 if (mysqlread["faceID"].ToString() != "")
                 {
-                    MainWindow window = new MainWindow(mysqlread["phone"].ToString(), mysqlread["faceID"].ToString());
+                    MainWindow window = new MainWindow();
                     window.Show();
                 }
                 else

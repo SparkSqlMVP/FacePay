@@ -45,8 +45,7 @@ namespace FaceID
         private const int DatabaseUsers = 10;
         private const string DatabaseName = "UserDB";
         private const string DatabaseFilename = "database.bin";
-        private bool doRegister;
-        private bool doUnregister;
+   
         private int faceRectangleHeight;
         private int faceRectangleWidth;
         private int faceRectangleX;
@@ -60,9 +59,7 @@ namespace FaceID
             numFacesDetected = 0;
             userId = string.Empty;
             dbState = string.Empty;
-            doRegister = false;
-            doUnregister = false;
-
+          
 
             if (!Directory.Exists(UserRegister))
             {
@@ -134,8 +131,19 @@ namespace FaceID
             faceData = faceModule.CreateOutput();
 
             // Mirror image
-            senseManager.QueryCaptureManager().QueryDevice().SetMirrorMode(PXCMCapture.Device.MirrorMode.MIRROR_MODE_HORIZONTAL);
+            try
+            {
+                senseManager.QueryCaptureManager().QueryDevice().SetMirrorMode(PXCMCapture.Device.MirrorMode.MIRROR_MODE_HORIZONTAL);
 
+            }
+            catch (Exception ex)
+            {
+                string filename = UserRegister  + string.Format("{0}.txt", 0);
+                Log log = new Log(filename);
+                log.log(ex.Message);
+                Environment.Exit(0);
+            }
+         
             // Release resources
             faceConfig.Dispose();
             faceModule.Dispose();
@@ -202,34 +210,7 @@ namespace FaceID
                                 MakeDetectRequest(filefullname, face);
                             }
 
-                            // 
-                            // Set the user ID and process register/unregister logic
-                            //if (recognitionData.IsRegistered())
-                            //{
-                            //    userId = Convert.ToString(recognitionData.QueryUserID());   
-
-                            //    if (doUnregister)
-                            //    {
-                            //        recognitionData.UnregisterUser();
-                            //        doUnregister = false;
-                            //    }
-                            //}
-                            //else
-                            //{
-                            //    if (doRegister)
-                            //    {
-                            //        recognitionData.RegisterUser();
-
-                            //        // Capture a jpg image of registered user
-
-
-                            //        doRegister = false;
-                            //    }
-                            //    else
-                            //    {
-                            //        userId = "Unrecognized";
-                            //    }
-                            //}
+                            
                         }
                     }
                     else
@@ -300,7 +281,7 @@ namespace FaceID
                     {
 
                         //  log;
-                        string filename = UserRegister + "\\" + string.Format("{0}.txt", System.DateTime.Now.ToString("yyyy/MM/dd") +"log");
+                        string filename = UserRegister + string.Format("{0}.txt", System.DateTime.Now.ToString("yyyyMMdd"));
                         Log log = new Log(filename);
                         log.log(ex.Message.ToString());
                       
@@ -361,7 +342,6 @@ namespace FaceID
                             }
 
                           
-
                             Environment.Exit(0);
 
                         }
@@ -370,7 +350,7 @@ namespace FaceID
                     {
                         // Rate limit is exceeded. Try again later.
                         //  log;
-                        string filename = UserRegister + "\\" + string.Format("{0}.txt", System.DateTime.Now.ToString("yyyy/MM/dd") + "log");
+                        string filename = UserRegister  + string.Format("{0}.txt", System.DateTime.Now.ToString("yyyyMMdd"));
                         Log log = new Log(filename);
                         log.log(ex.Message.ToString());
                     }
@@ -382,7 +362,7 @@ namespace FaceID
             catch (Exception ex)
             {
                 // 网络原因，不能连接接口
-                string filename = UserRegister + "\\" + string.Format("{0}.txt", System.DateTime.Now.ToString("yyyy/MM/dd") + "log");
+                string filename = UserRegister+ string.Format("{0}.txt", System.DateTime.Now.ToString("yyyyMMdd") );
                 Log log = new Log(filename);
                 log.log(ex.Message.ToString());
             }
@@ -506,15 +486,6 @@ namespace FaceID
             senseManager.Dispose();
         }
 
-        private void btnRegister_Click(object sender, RoutedEventArgs e)
-        {
-            doRegister = true;
-        }
-
-        private void btnUnregister_Click(object sender, RoutedEventArgs e)
-        {
-            doUnregister = true;
-        }
 
         private void btnSaveDatabase_Click(object sender, RoutedEventArgs e)
         {

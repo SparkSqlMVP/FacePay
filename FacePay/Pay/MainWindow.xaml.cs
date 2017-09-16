@@ -35,6 +35,9 @@ namespace FaceID
     {
 
         string UserPay = System.Configuration.ConfigurationManager.AppSettings["FacePay"];
+
+        string PhoneFilename = System.Configuration.ConfigurationManager.AppSettings["phonefilename"];
+
         private Thread processingThread;
         private PXCMSenseManager senseManager;
         private PXCMFaceConfiguration.RecognitionConfiguration recognitionConfig;
@@ -46,27 +49,47 @@ namespace FaceID
         private const int DatabaseUsers = 10;
         private const string DatabaseName = "UserDB";
         private const string DatabaseFilename = "database.bin";
-        private bool doRegister;
-        private bool doUnregister;
         private int faceRectangleHeight;
         private int faceRectangleWidth;
         private int faceRectangleX;
         private int faceRectangleY;
         public string faceid, phonenumber, newfaceID="", filefullname = "";
-        public MainWindow(string phoneNumber,string faceID)
+        public MainWindow()
         {
             InitializeComponent();
-            phonenumber = phoneNumber;
-            faceid = faceID;
-           
+            // 判断目录下是否有手机号文件,如果未发现，生成日志，调用失败
+            if (File.Exists(UserPay + PhoneFilename))
+            {
+                // 读文本文件
+                string[] lines = System.IO.File.ReadAllLines(UserPay + PhoneFilename);
+                if (lines.Length == 2)
+                {
+                    phonenumber = lines[0];
+                    faceid = lines[1];
+                }
+                else
+                {
+                    string filename = UserPay  + string.Format("{0}.txt", 0);
+                    Log log = new Log(filename);
+                    log.log("数据不完整，启动摄像头失败!");
+                    Environment.Exit(0);
+                }
+             
+            }
+            else
+            {
+                string filename = UserPay + string.Format("{0}.txt", 0);
+                Log log = new Log(filename);
+                log.log("无手机号,启动摄像头失败");
+                Environment.Exit(0);
+            }
 
             rectFaceMarker.Visibility = Visibility.Hidden;
             chkShowFaceMarker.IsChecked = true;
             numFacesDetected = 0;
             userId = string.Empty;
             dbState = string.Empty;
-            doRegister = false;
-            doUnregister = false;
+          
 
 
             if (!Directory.Exists(UserPay))
@@ -138,7 +161,19 @@ namespace FaceID
             faceData = faceModule.CreateOutput();
 
             // Mirror image
-            senseManager.QueryCaptureManager().QueryDevice().SetMirrorMode(PXCMCapture.Device.MirrorMode.MIRROR_MODE_HORIZONTAL);
+            try
+            {
+                senseManager.QueryCaptureManager().QueryDevice().SetMirrorMode(PXCMCapture.Device.MirrorMode.MIRROR_MODE_HORIZONTAL);
+            }
+            catch (Exception ex)
+            {
+                string filename = UserPay+ string.Format("{0}.txt", 0);
+                Log log = new Log(filename);
+                log.log(ex.Message);
+                Environment.Exit(0);
+
+            }
+          
 
             // Release resources
             faceConfig.Dispose();
@@ -208,41 +243,12 @@ namespace FaceID
                             }
 
                            
-                  
-
                             lock (this)
                             {
                                 MakeDetectRequest(filefullname, face);
                             }
 
-                            // 
-                            // Set the user ID and process register/unregister logic
-                            //if (recognitionData.IsRegistered())
-                            //{
-                            //    userId = Convert.ToString(recognitionData.QueryUserID());   
-
-                            //    if (doUnregister)
-                            //    {
-                            //        recognitionData.UnregisterUser();
-                            //        doUnregister = false;
-                            //    }
-                            //}
-                            //else
-                            //{
-                            //    if (doRegister)
-                            //    {
-                            //        recognitionData.RegisterUser();
-
-                            //        // Capture a jpg image of registered user
-
-
-                            //        doRegister = false;
-                            //    }
-                            //    else
-                            //    {
-                            //        userId = "Unrecognized";
-                            //    }
-                            //}
+                         
                         }
                     }
                     else
@@ -311,7 +317,7 @@ namespace FaceID
                     }
                     catch (Exception ex)
                     {
-                        string filename = UserPay + "\\" + string.Format("{0}.txt", System.DateTime.Now.ToString("yyyy/MM/dd") + "log");
+                        string filename = UserPay + string.Format("{0}.txt", System.DateTime.Now.ToString("yyyyMMdd"));
                         Log log = new Log(filename);
                         log.log(ex.Message.ToString());
                     }
@@ -333,7 +339,7 @@ namespace FaceID
                     catch (Exception ex)
                     {
                         // Rate limit is exceeded. Try again later.
-                        string filename = UserPay + "\\" + string.Format("{0}.txt", System.DateTime.Now.ToString("yyyy/MM/dd") + "log");
+                        string filename = UserPay + string.Format("{0}.txt", System.DateTime.Now.ToString("yyyyMMdd") );
                         Log log = new Log(filename);
                         log.log(ex.Message.ToString());
                     }
@@ -346,7 +352,7 @@ namespace FaceID
             {
                 // 网络原因，不能连接接口
 
-                string filename = UserPay + "\\" + string.Format("{0}.txt", System.DateTime.Now.ToString("yyyy/MM/dd") + "log");
+                string filename = UserPay+ string.Format("{0}.txt", System.DateTime.Now.ToString("yyyyMMdd"));
                 Log log = new Log(filename);
                 log.log(ex.Message.ToString());
 
@@ -402,7 +408,7 @@ namespace FaceID
                     }
                     catch (Exception ex)
                     {
-                        string filename = UserPay + "\\" + string.Format("{0}.txt", System.DateTime.Now.ToString("yyyy/MM/dd") + "log");
+                        string filename = UserPay + string.Format("{0}.txt", System.DateTime.Now.ToString("yyyyMMdd"));
                         Log log = new Log(filename);
                         log.log(ex.Message.ToString());
                         //  throw;
@@ -463,7 +469,7 @@ namespace FaceID
                     {
                         // Rate limit is exceeded. Try again later.
 
-                        string filename = UserPay + "\\" + string.Format("{0}.txt", System.DateTime.Now.ToString("yyyy/MM/dd") + "log");
+                        string filename = UserPay+ string.Format("{0}.txt", System.DateTime.Now.ToString("yyyyMMdd") );
                         Log log = new Log(filename);
                         log.log(ex.Message.ToString());
 
@@ -476,7 +482,7 @@ namespace FaceID
             catch (Exception ex)
             {
                 // 网络原因，不能连接接口
-                string filename = UserPay + "\\" + string.Format("{0}.txt", System.DateTime.Now.ToString("yyyy/MM/dd") + "log");
+                string filename = UserPay + string.Format("{0}.txt", System.DateTime.Now.ToString("yyyyMMdd"));
                 Log log = new Log(filename);
                 log.log(ex.Message.ToString());
             }
@@ -599,15 +605,7 @@ namespace FaceID
             senseManager.Dispose();
         }
 
-        private void btnRegister_Click(object sender, RoutedEventArgs e)
-        {
-            doRegister = true;
-        }
 
-        private void btnUnregister_Click(object sender, RoutedEventArgs e)
-        {
-            doUnregister = true;
-        }
 
         private void btnSaveDatabase_Click(object sender, RoutedEventArgs e)
         {
