@@ -309,10 +309,11 @@ namespace FaceID
                         System.IO.File.Delete(imageFilePath);
                         lblUserId.Content = "采集用户人脸无效,需要重新采集!";
                     }
-                    catch (Exception)
+                    catch (Exception ex)
                     {
-
-                        //  throw;
+                        string filename = UserPay + "\\" + string.Format("{0}.txt", System.DateTime.Now.ToString("yyyy/MM/dd") + "log");
+                        Log log = new Log(filename);
+                        log.log(ex.Message.ToString());
                     }
 
 
@@ -332,15 +333,22 @@ namespace FaceID
                     catch (Exception ex)
                     {
                         // Rate limit is exceeded. Try again later.
+                        string filename = UserPay + "\\" + string.Format("{0}.txt", System.DateTime.Now.ToString("yyyy/MM/dd") + "log");
+                        Log log = new Log(filename);
+                        log.log(ex.Message.ToString());
                     }
 
                   
                 }
 
             }
-            catch (Exception)
+            catch (Exception ex)
             {
                 // 网络原因，不能连接接口
+
+                string filename = UserPay + "\\" + string.Format("{0}.txt", System.DateTime.Now.ToString("yyyy/MM/dd") + "log");
+                Log log = new Log(filename);
+                log.log(ex.Message.ToString());
 
             }
 
@@ -392,9 +400,11 @@ namespace FaceID
                     {
                         lblUserId.Content = "用户人脸不匹配，无法实现刷脸支付!";
                     }
-                    catch (Exception)
+                    catch (Exception ex)
                     {
-
+                        string filename = UserPay + "\\" + string.Format("{0}.txt", System.DateTime.Now.ToString("yyyy/MM/dd") + "log");
+                        Log log = new Log(filename);
+                        log.log(ex.Message.ToString());
                         //  throw;
                     }
 
@@ -453,6 +463,10 @@ namespace FaceID
                     {
                         // Rate limit is exceeded. Try again later.
 
+                        string filename = UserPay + "\\" + string.Format("{0}.txt", System.DateTime.Now.ToString("yyyy/MM/dd") + "log");
+                        Log log = new Log(filename);
+                        log.log(ex.Message.ToString());
+
                     }
 
 
@@ -462,7 +476,9 @@ namespace FaceID
             catch (Exception ex)
             {
                 // 网络原因，不能连接接口
-
+                string filename = UserPay + "\\" + string.Format("{0}.txt", System.DateTime.Now.ToString("yyyy/MM/dd") + "log");
+                Log log = new Log(filename);
+                log.log(ex.Message.ToString());
             }
 
 

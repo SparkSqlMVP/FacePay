@@ -16,5 +16,9 @@
         <Button Content="确认" HorizontalAlignment="Left" Margin="112.713,67,0,0" VerticalAlignment="Top" Width="75" Click="Button_Click" Grid.Column="1"/>
         <Label Content="手机默认后4位" HorizontalAlignment="Left" Margin="42,36,0,0" VerticalAlignment="Top" Width="120" Grid.ColumnSpan="2"/>
 
+        
+
     </Grid>
+  
+        
 </Window>

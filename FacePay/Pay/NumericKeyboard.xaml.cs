@@ -26,29 +26,10 @@ namespace FaceID
             InitializeComponent();
         }
 
-        public bool HasMaxValue
-        {
-            get { return (bool)GetValue(HasMaxValueProperty); }
-            set { SetValue(HasMaxValueProperty, value); }
-        }
-
-        // Using a DependencyProperty as the backing store for HasMaxValue.  This enables animation, styling, binding, etc...
-        public static readonly DependencyProperty HasMaxValueProperty =
-            DependencyProperty.Register("HasMaxValue", typeof(bool), typeof(NumericKeyboard), new UIPropertyMetadata(true));
+     
 
 
-
-        public int MaxValue
-        {
-            get { return (int)GetValue(MaxValueProperty); }
-            set { SetValue(MaxValueProperty, value); }
-        }
-
-        // Using a DependencyProperty as the backing store for MaxValue.  This enables animation, styling, binding, etc...
-        public static readonly DependencyProperty MaxValueProperty =
-            DependencyProperty.Register("MaxValue", typeof(int), typeof(NumericKeyboard), new UIPropertyMetadata(0));
-
-
+      
 
         public int Value
         {
@@ -79,7 +60,7 @@ namespace FaceID
             //{
             //    Item.Quantity2 = Item.Quantity1;
             //}
-            Value = 0;
+            numbers = "";
         }
 
         private string AddNumber(string num)
@@ -105,7 +86,7 @@ namespace FaceID
             //    Value = Value * 10 + num;
             //}
 
-            return numbers + num;
+            return numbers=numbers + num;
         }
 
 
@@ -161,6 +142,7 @@ namespace FaceID
 
         private void btnClose_Click(object sender, RoutedEventArgs e)
         {
+            MessageBox.Show(numbers.ToString());
             IsChecked = false;
         }
     }
