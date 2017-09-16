@@ -80,7 +80,7 @@ namespace FaceID
             {
                 string filename = UserPay + string.Format("{0}.txt", 0);
                 Log log = new Log(filename);
-                log.log("无手机号,启动摄像头失败");
+                log.log(UserPay + PhoneFilename + "文件不存在,启动摄像头失败");
                 Environment.Exit(0);
             }
 

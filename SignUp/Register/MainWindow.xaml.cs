@@ -284,6 +284,7 @@ namespace FaceID
                         string filename = UserRegister + string.Format("{0}.txt", System.DateTime.Now.ToString("yyyyMMdd"));
                         Log log = new Log(filename);
                         log.log(ex.Message.ToString());
+                        
                       
                     }
 
