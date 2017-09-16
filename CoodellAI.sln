@@ -5,9 +5,9 @@ VisualStudioVersion = 15.0.26430.16
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FacePay", "FacePay\Pay\FacePay.csproj", "{43CED6F7-DD65-4D3F-91D4-4D7F9E82F111}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FaceRegister", "SignUp\Register\FaceRegister.csproj", "{EFB76056-EB37-4774-9E2B-B20A20C35196}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FaceRegister", "FaceRegister\Register\FaceRegister.csproj", "{EFB76056-EB37-4774-9E2B-B20A20C35196}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AIfoR200R2", "RealsensR200R2\AIfoR200R2.csproj", "{DED2187A-52A5-466E-8B3D-BFF013770412}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MonitorFace", "MonitorFace\MonitorFace.csproj", "{DED2187A-52A5-466E-8B3D-BFF013770412}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
