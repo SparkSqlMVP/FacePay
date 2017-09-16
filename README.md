@@ -4,4 +4,4 @@ face register
 face pay
 face recongnization
 
-![Alt text](https://github.com/SparkSqlMVP/FacePay/raw/master/Screenshots/2.png)
+![Alt text](https://github.com/SparkSqlMVP/FacePay/blob/master/Screenshots/ext.jpg)
