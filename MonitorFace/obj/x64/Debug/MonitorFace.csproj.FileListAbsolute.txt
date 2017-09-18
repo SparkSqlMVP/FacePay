@@ -1,0 +1,14 @@
+C:\Clients\3 coodell\AIProject\AI\FacePay\MonitorFace\bin\x64\Debug\FaceTracking.cs.exe.config
+C:\Clients\3 coodell\AIProject\AI\FacePay\MonitorFace\bin\x64\Debug\FaceTracking.cs.exe
+C:\Clients\3 coodell\AIProject\AI\FacePay\MonitorFace\bin\x64\Debug\FaceTracking.cs.pdb
+C:\Clients\3 coodell\AIProject\AI\FacePay\MonitorFace\bin\x64\Debug\Intel.RealSense.cs.dll
+C:\Clients\3 coodell\AIProject\AI\FacePay\MonitorFace\bin\x64\Debug\Intel.RealSense.Face.cs.dll
+C:\Clients\3 coodell\AIProject\AI\FacePay\MonitorFace\bin\x64\Debug\libpxcclr.cs.dll
+C:\Clients\3 coodell\AIProject\AI\FacePay\MonitorFace\bin\x64\Debug\Newtonsoft.Json.dll
+C:\Clients\3 coodell\AIProject\AI\FacePay\MonitorFace\bin\x64\Debug\Newtonsoft.Json.xml
+C:\Clients\3 coodell\AIProject\AI\FacePay\MonitorFace\obj\x64\Debug\DF_FaceTracking.cs.MainForm.resources
+C:\Clients\3 coodell\AIProject\AI\FacePay\MonitorFace\obj\x64\Debug\FaceTracking.cs.Properties.Resources.resources
+C:\Clients\3 coodell\AIProject\AI\FacePay\MonitorFace\obj\x64\Debug\MonitorFace.csproj.GenerateResource.Cache
+C:\Clients\3 coodell\AIProject\AI\FacePay\MonitorFace\obj\x64\Debug\FaceTracking.cs.exe
+C:\Clients\3 coodell\AIProject\AI\FacePay\MonitorFace\obj\x64\Debug\FaceTracking.cs.pdb
+C:\Clients\3 coodell\AIProject\AI\FacePay\MonitorFace\obj\x64\Debug\MonitorFace.csprojResolveAssemblyReference.cache

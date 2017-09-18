@@ -88,6 +88,28 @@ namespace DF_FaceTracking.cs
             DisableUnsupportedAlgos();
             RestoreUserSettings();
 
+
+            /***
+             * 
+             * */
+
+            SaveUserSettings();
+            DisableModuleCheckBoxes();
+            DisableTextBoxes();
+
+            MainMenu.Enabled = false;
+            Start.Enabled = false;
+            Stop.Enabled = true;
+
+            RegisterUser.Enabled = Recognition.Checked;
+            UnregisterUser.Enabled = Recognition.Checked;
+
+            Stopped = false;
+
+            var thread = new Thread(DoTracking);
+            thread.Start();
+
+
             FormClosing += MainForm_FormClosing;
             Panel2.Paint += Panel_Paint;
         }

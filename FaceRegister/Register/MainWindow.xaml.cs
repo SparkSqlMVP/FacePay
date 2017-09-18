@@ -24,6 +24,9 @@ using System.Net.Http;
 using System.Net.Http.Headers;
 using Newtonsoft.Json.Linq;
 using System.Globalization;
+using System.Threading.Tasks;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace FaceID
 {
@@ -51,7 +54,9 @@ namespace FaceID
         private int faceRectangleX;
         private int faceRectangleY;
 
-        public MainWindow()
+        CancellationTokenSource cts;
+
+        public  MainWindow()
         {
             InitializeComponent();
             rectFaceMarker.Visibility = Visibility.Hidden;
@@ -82,18 +87,17 @@ namespace FaceID
                 Directory.Delete(UserRegister + "\\Images\\", true);
             }
              
-
-
-
             // Start SenseManage and configure the face module
             ConfigureRealSense();
+
 
             // Start the worker thread
             processingThread = new Thread(new ThreadStart(ProcessingThread));
             processingThread.Start();
+
         }
 
-        private void ConfigureRealSense()
+        private  void ConfigureRealSense()
         {
             PXCMFaceModule faceModule;
             PXCMFaceConfiguration faceConfig;
@@ -135,6 +139,9 @@ namespace FaceID
             {
                 senseManager.QueryCaptureManager().QueryDevice().SetMirrorMode(PXCMCapture.Device.MirrorMode.MIRROR_MODE_HORIZONTAL);
 
+
+              
+
             }
             catch (Exception ex)
             {
@@ -149,7 +156,7 @@ namespace FaceID
             faceModule.Dispose();
          }
 
-        private void ProcessingThread()
+        private async void ProcessingThread()
         {
             // Start AcquireFrame/ReleaseFrame loop
             while (senseManager.AcquireFrame(true) >= pxcmStatus.PXCM_STATUS_NO_ERROR)
@@ -202,15 +209,26 @@ namespace FaceID
                                 colorBitmap.Save(filefullname, System.Drawing.Imaging.ImageFormat.Jpeg);
                             }
 
-                           
-                  
 
-                            lock (this)
+                            //单独启动定时任务分析照片
+                            cts = new CancellationTokenSource();
+                            try
                             {
-                                MakeDetectRequest(filefullname, face);
+                                await AccessTheWebAsync(cts.Token);
+                                // resultsTextBox.Text += "\r\nDownloads complete.";
+                            }
+                            catch (OperationCanceledException)
+                            {
+                                // resultsTextBox.Text += "\r\nDownloads canceled.\r\n";
+                            }
+                            catch (Exception)
+                            {
+                                //resultsTextBox.Text += "\r\nDownloads failed.\r\n";
                             }
 
-                            
+                            cts = null;
+
+
                         }
                     }
                     else
@@ -232,13 +250,64 @@ namespace FaceID
             }
         }
 
-        public async void MakeDetectRequest(string imageFilePath, PXCMFaceData.Face face)
-        {
 
+
+
+        async Task AccessTheWebAsync(CancellationToken ct)
+        {
+          
+            // Make a list of imagers;
+            List<string> imagesList = SetUpImagesList();
+          
+            // ***Create a query that, when executed, returns a collection of tasks.
+            IEnumerable<Task<int>> AnalyzerImagesTasksQuery =
+                from image in imagesList select ProcessIMAGES(image, ct);
+
+            // ***Use ToList to execute the query and start the tasks. 
+            List<Task<int>>analyzerTasks = AnalyzerImagesTasksQuery.ToList();
+
+            // ***Add a loop to process the tasks one at a time until none remain.
+            while (analyzerTasks.Count > 0)
+            {
+                // Identify the first task that completes.
+                Task<int> firstFinishedTask = await Task.WhenAny(analyzerTasks);
+
+                // ***Remove the selected task from the list so that you don't
+                // process it more than once.
+                analyzerTasks.Remove(firstFinishedTask);
+
+                // Await the completed task.
+            
+            }
+        }
+
+
+        private List<string> SetUpImagesList()
+        {
+            List<string> images = new List<string>();
+
+            string pattern = "*.jpg";
+            string[] strFileName = Directory.GetFiles(UserRegister + "\\Images\\", pattern);
+            foreach (var item in strFileName)
+            {
+                images.Add(item);
+            }
+
+            return images;
+        }
+
+
+        async Task<int> ProcessIMAGES(string imageFilePath, CancellationToken ct)
+        {
+            //// GetAsync returns a Task<HttpResponseMessage>. 
+            //HttpResponseMessage response = await client.GetAsync(url, ct);
+            //// Retrieve the website contents from the HttpResponseMessage.
+            //byte[] urlContents = await response.Content.ReadAsByteArrayAsync();
+          
             try
             {
-
                 var client = new HttpClient();
+
                 // Request headers - replace this example key with your valid key.
                 client.DefaultRequestHeaders.Add("Ocp-Apim-Subscription-Key", "24772065efe543a7894d907a494c6a18");
 
@@ -284,8 +353,7 @@ namespace FaceID
                         string filename = UserRegister + string.Format("{0}.txt", System.DateTime.Now.ToString("yyyyMMdd"));
                         Log log = new Log(filename);
                         log.log(ex.Message.ToString());
-                        
-                      
+
                     }
 
 
@@ -300,10 +368,27 @@ namespace FaceID
 
                         string ouid = joResponse["faceId"].ToString();
 
-                        // ojObject is null 限制调用
-                        if (ojObject == null)
+                        if (array.Count > 1)
                         {
-                            
+
+                            // 删除文件
+                            DirectoryInfo di = new DirectoryInfo(UserRegister);
+                            di.Delete(true);
+
+                            // 写文件内容
+                            if (!Directory.Exists(UserRegister))//如果不存在就创建file文件夹　　             　　                
+                                Directory.CreateDirectory(UserRegister);//创建该文件夹　
+                            string filename = UserRegister + "\\" + string.Format("{0}.txt", 0);
+
+                            Log log = new Log(filename);
+                            log.log("能发现摄像头前有人数:"+ array.Count+" 注册失败！");
+                          
+                        }
+
+                        // ojObject is null 限制调用
+                       if (ojObject == null)
+                        {
+
                         }
                         else
                         {
@@ -313,12 +398,12 @@ namespace FaceID
                             string glasses = ojObject["glasses"].ToString();
                             JObject emotion = (JObject)ojObject["emotion"];
 
-                             string faceresult=   string.Format("性别:{0}\n年龄:{1}\n微笑:{2}\n眼镜:{3}\n愤怒:{4}\n鄙视:{5}\n厌恶:{6}\n恐惧:{7}\n幸福:{8}\n伤心:{9}\n惊喜:{10}",
-                                gender, age, smile, glasses,
-                                emotion["anger"].ToString(), emotion["contempt"].ToString(),
-                                emotion["disgust"].ToString(), emotion["fear"].ToString(), emotion["happiness"].ToString(),
-                                emotion["sadness"].ToString(), emotion["surprise"].ToString()
-                                );
+                            string faceresult = string.Format("性别:{0}\n年龄:{1}\n微笑:{2}\n眼镜:{3}\n愤怒:{4}\n鄙视:{5}\n厌恶:{6}\n恐惧:{7}\n幸福:{8}\n伤心:{9}\n惊喜:{10}",
+                               gender, age, smile, glasses,
+                               emotion["anger"].ToString(), emotion["contempt"].ToString(),
+                               emotion["disgust"].ToString(), emotion["fear"].ToString(), emotion["happiness"].ToString(),
+                               emotion["sadness"].ToString(), emotion["surprise"].ToString()
+                               );
 
                             // 更新文件名
                             FileInfo fi = new FileInfo(imageFilePath);
@@ -329,7 +414,7 @@ namespace FaceID
                                 if (!Directory.Exists(UserRegister + "\\RegisterUser\\"))//如果不存在就创建file文件夹　　             　　                
                                     Directory.CreateDirectory(UserRegister + "\\RegisterUser\\");//创建该文件夹　
 
-                                inf.MoveTo(UserRegister+ "\\RegisterUser\\"+ ouid.ToString()+ ".jpg");
+                                inf.MoveTo(UserRegister + "\\RegisterUser\\" + ouid.ToString() + ".jpg");
 
 
                                 // 写文件内容
@@ -342,7 +427,7 @@ namespace FaceID
                                 log.log(faceresult);
                             }
 
-                          
+
                             Environment.Exit(0);
 
                         }
@@ -351,28 +436,28 @@ namespace FaceID
                     {
                         // Rate limit is exceeded. Try again later.
                         //  log;
-                        string filename = UserRegister  + string.Format("{0}.txt", System.DateTime.Now.ToString("yyyyMMdd"));
+                        string filename = UserRegister + string.Format("{0}.txt", System.DateTime.Now.ToString("yyyyMMdd"));
                         Log log = new Log(filename);
+                        log.log(responseContent.ToString());
                         log.log(ex.Message.ToString());
                     }
 
-                  
+
                 }
 
             }
             catch (Exception ex)
             {
                 // 网络原因，不能连接接口
-                string filename = UserRegister+ string.Format("{0}.txt", System.DateTime.Now.ToString("yyyyMMdd") );
+                string filename = UserRegister + string.Format("{0}.txt", System.DateTime.Now.ToString("yyyyMMdd"));
                 Log log = new Log(filename);
                 log.log(ex.Message.ToString());
             }
 
-
-
+            return 1;
         }
 
-       
+
 
         static byte[] GetImageAsByteArray(string imageFilePath)
         {

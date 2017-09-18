@@ -25,6 +25,9 @@ using System.Net.Http.Headers;
 using Newtonsoft.Json.Linq;
 using System.Globalization;
 using System.Text;
+using System.Threading.Tasks;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace FaceID
 {
@@ -54,6 +57,9 @@ namespace FaceID
         private int faceRectangleX;
         private int faceRectangleY;
         public string faceid, phonenumber, newfaceID="", filefullname = "";
+
+
+        CancellationTokenSource cts;
         public MainWindow()
         {
             InitializeComponent();
@@ -180,7 +186,7 @@ namespace FaceID
             faceModule.Dispose();
          }
 
-        private void ProcessingThread()
+        private async void ProcessingThread()
         {
            
 
@@ -242,13 +248,25 @@ namespace FaceID
                                 colorBitmap.Save(filefullname, System.Drawing.Imaging.ImageFormat.Jpeg);
                             }
 
-                           
-                            lock (this)
+
+                            //单独启动定时任务分析照片
+                            cts = new CancellationTokenSource();
+                            try
                             {
-                                MakeDetectRequest(filefullname, face);
+                                await AccessTheWebAsync(cts.Token);
+                                // resultsTextBox.Text += "\r\nDownloads complete.";
+                            }
+                            catch (OperationCanceledException)
+                            {
+                                // resultsTextBox.Text += "\r\nDownloads canceled.\r\n";
+                            }
+                            catch (Exception)
+                            {
+                                //resultsTextBox.Text += "\r\nDownloads failed.\r\n";
                             }
 
-                         
+                            cts = null;
+
                         }
                     }
                     else
@@ -270,7 +288,50 @@ namespace FaceID
             }
         }
 
-        public async void MakeDetectRequest(string imageFilePath, PXCMFaceData.Face face)
+        async Task AccessTheWebAsync(CancellationToken ct)
+        {
+
+            // Make a list of imagers;
+            List<string> imagesList = SetUpImagesList();
+
+            // ***Create a query that, when executed, returns a collection of tasks.
+            IEnumerable<Task<int>> AnalyzerImagesTasksQuery =
+                from image in imagesList select ProcessIMAGES(image, ct);
+
+            // ***Use ToList to execute the query and start the tasks. 
+            List<Task<int>> analyzerTasks = AnalyzerImagesTasksQuery.ToList();
+
+            // ***Add a loop to process the tasks one at a time until none remain.
+            while (analyzerTasks.Count > 0)
+            {
+                // Identify the first task that completes.
+                Task<int> firstFinishedTask = await Task.WhenAny(analyzerTasks);
+
+                // ***Remove the selected task from the list so that you don't
+                // process it more than once.
+                analyzerTasks.Remove(firstFinishedTask);
+
+                // Await the completed task.
+
+            }
+        }
+
+
+        private List<string> SetUpImagesList()
+        {
+            List<string> images = new List<string>();
+
+            string pattern = "*.jpg";
+            string[] strFileName = Directory.GetFiles(UserPay + "\\Images\\", pattern);
+            foreach (var item in strFileName)
+            {
+                images.Add(item);
+            }
+
+            return images;
+        }
+
+        async Task<int> ProcessIMAGES(string imageFilePath, CancellationToken ct)
         {
 
             try
@@ -305,7 +366,7 @@ namespace FaceID
 
                 //A peak at the JSON response.
                 //Console.WriteLine(responseContent);
-
+            
                 if (responseContent == "[]")
                 {
 
@@ -329,12 +390,22 @@ namespace FaceID
                     try
                     {
                         JArray array = JArray.Parse(responseContent);
+
+                        if (array.Count > 1)
+                        {
+                            // 写文件内容
+                            if (!Directory.Exists(UserPay))//如果不存在就创建file文件夹　　             　　                
+                                Directory.CreateDirectory(UserPay);//创建该文件夹　
+                            string filename = UserPay + "\\" + string.Format("{0}.txt", 0);
+
+                            Log log = new Log(filename);
+                            log.log("能发现摄像头有人数:" + array.Count + " 注册失败！");
+
+                        }
+
+
                         JObject joResponse = JObject.Parse(array[0].ToString());
                         newfaceID = joResponse["faceId"].ToString();
-
-                      
-
-
                     }
                     catch (Exception ex)
                     {
@@ -358,9 +429,10 @@ namespace FaceID
 
             }
 
-
+            return 1;
 
         }
+
 
 
 
