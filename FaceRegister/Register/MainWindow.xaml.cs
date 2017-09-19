@@ -54,7 +54,8 @@ namespace FaceID
         private int faceRectangleX;
         private int faceRectangleY;
 
-        CancellationTokenSource cts;
+        string errorlog="", successlog = "";
+        int flat = 0;
 
         public  MainWindow()
         {
@@ -138,14 +139,10 @@ namespace FaceID
             try
             {
                 senseManager.QueryCaptureManager().QueryDevice().SetMirrorMode(PXCMCapture.Device.MirrorMode.MIRROR_MODE_HORIZONTAL);
-
-
-              
-
             }
             catch (Exception ex)
             {
-                string filename = UserRegister  + string.Format("{0}.txt", 0);
+                string filename = UserRegister  + string.Format("{0}.txt", System.DateTime.Now.ToString("yyyyMMdd"));
                 Log log = new Log(filename);
                 log.log(ex.Message);
                 Environment.Exit(0);
@@ -156,11 +153,34 @@ namespace FaceID
             faceModule.Dispose();
          }
 
-        private async void ProcessingThread()
+        private  void ProcessingThread()
         {
             // Start AcquireFrame/ReleaseFrame loop
             while (senseManager.AcquireFrame(true) >= pxcmStatus.PXCM_STATUS_NO_ERROR)
             {
+                //写日志信息；
+                string errorfilename = UserRegister + "\\" + string.Format("{0}.txt", 0);
+                string successfilename = UserRegister + "\\" + string.Format("{0}.txt", 1);
+
+                if (errorlog != "" & flat==1)
+                {
+                    Log log = new Log(errorfilename);
+                    log.log(errorlog);
+                    
+                    Environment.Exit(0);
+                    return;
+                }
+                if (successlog != "" & flat == 1)
+                {
+                    Log log = new Log(successfilename);
+                    log.log(successlog);
+                   
+
+                    Environment.Exit(0);
+                    return;
+                }
+
+
                 // Acquire the color image data
                 PXCMCapture.Sample sample = senseManager.QuerySample();
                 Bitmap colorBitmap;
@@ -202,33 +222,21 @@ namespace FaceID
                             if (!Directory.Exists(UserRegister + "\\Images\\"))//如果不存在就创建file文件夹　　             　　                
                                 Directory.CreateDirectory(UserRegister + "\\Images\\");//创建该文件夹　
                                                                                        //string imagefilename = System.Guid.NewGuid().ToString(); face.QueryUserID().ToString(CultureInfo.InvariantCulture)
-                            string filefullname = UserRegister + "\\Images\\" + string.Format("{0}.jpg", System.Guid.NewGuid().ToString());
+                            string filefullname = UserRegister + "\\Images\\" + string.Format("{0}.jpg", face.QueryUserID().ToString(CultureInfo.InvariantCulture));
 
                             if (!File.Exists(filefullname))
                             {
                                 colorBitmap.Save(filefullname, System.Drawing.Imaging.ImageFormat.Jpeg);
                             }
 
-
-                            //单独启动定时任务分析照片
-                            cts = new CancellationTokenSource();
-                            try
+                            lock (this)
                             {
-                                await AccessTheWebAsync(cts.Token);
-                                // resultsTextBox.Text += "\r\nDownloads complete.";
+                                if (flat == 0)
+                                {
+                                    ProcessIMAGES(filefullname);
+                                }
+                               
                             }
-                            catch (OperationCanceledException)
-                            {
-                                // resultsTextBox.Text += "\r\nDownloads canceled.\r\n";
-                            }
-                            catch (Exception)
-                            {
-                                //resultsTextBox.Text += "\r\nDownloads failed.\r\n";
-                            }
-
-                            cts = null;
-
-
                         }
                     }
                     else
@@ -253,34 +261,6 @@ namespace FaceID
 
 
 
-        async Task AccessTheWebAsync(CancellationToken ct)
-        {
-          
-            // Make a list of imagers;
-            List<string> imagesList = SetUpImagesList();
-          
-            // ***Create a query that, when executed, returns a collection of tasks.
-            IEnumerable<Task<int>> AnalyzerImagesTasksQuery =
-                from image in imagesList select ProcessIMAGES(image, ct);
-
-            // ***Use ToList to execute the query and start the tasks. 
-            List<Task<int>>analyzerTasks = AnalyzerImagesTasksQuery.ToList();
-
-            // ***Add a loop to process the tasks one at a time until none remain.
-            while (analyzerTasks.Count > 0)
-            {
-                // Identify the first task that completes.
-                Task<int> firstFinishedTask = await Task.WhenAny(analyzerTasks);
-
-                // ***Remove the selected task from the list so that you don't
-                // process it more than once.
-                analyzerTasks.Remove(firstFinishedTask);
-
-                // Await the completed task.
-            
-            }
-        }
-
 
         private List<string> SetUpImagesList()
         {
@@ -297,13 +277,9 @@ namespace FaceID
         }
 
 
-        async Task<int> ProcessIMAGES(string imageFilePath, CancellationToken ct)
+        async void ProcessIMAGES(string imageFilePath)
         {
-            //// GetAsync returns a Task<HttpResponseMessage>. 
-            //HttpResponseMessage response = await client.GetAsync(url, ct);
-            //// Retrieve the website contents from the HttpResponseMessage.
-            //byte[] urlContents = await response.Content.ReadAsByteArrayAsync();
-          
+            flat = 1;
             try
             {
                 var client = new HttpClient();
@@ -343,19 +319,18 @@ namespace FaceID
                     // 此位置识别不到您
                     try
                     {
-                        System.IO.File.Delete(imageFilePath);
-                        lblUserId.Content = "采集用户人脸无效,需要重新采集!";
+                       // System.IO.File.Delete(imageFilePath);
+                        // lblUserId.Content = "采集用户人脸无效,需要重新采集!";
+                        errorlog = errorlog + Environment.NewLine + string.Format("照片:{0},采集的脸部特征无效,需要重新采集!", imageFilePath);
+                       
                     }
                     catch (Exception ex)
                     {
-
-                        //  log;
-                        string filename = UserRegister + string.Format("{0}.txt", System.DateTime.Now.ToString("yyyyMMdd"));
-                        Log log = new Log(filename);
-                        log.log(ex.Message.ToString());
-
+                        ////  log;
+                        //string filename = UserRegister + string.Format("{0}.txt", System.DateTime.Now.ToString("yyyyMMdd"));
+                        //Log log = new Log(filename);
+                        //log.log(ex.Message.ToString());
                     }
-
 
                 }
                 else
@@ -370,18 +345,7 @@ namespace FaceID
 
                         if (array.Count > 1)
                         {
-
-                            // 删除文件
-                            DirectoryInfo di = new DirectoryInfo(UserRegister);
-                            di.Delete(true);
-
-                            // 写文件内容
-                            if (!Directory.Exists(UserRegister))//如果不存在就创建file文件夹　　             　　                
-                                Directory.CreateDirectory(UserRegister);//创建该文件夹　
-                            string filename = UserRegister + "\\" + string.Format("{0}.txt", 0);
-
-                            Log log = new Log(filename);
-                            log.log("能发现摄像头前有人数:"+ array.Count+" 注册失败！");
+                            errorlog = errorlog+ Environment.NewLine+ string.Format("检测摄像头前有人数:" + array.Count + "人，不支持人脸注册！");
                           
                         }
 
@@ -409,37 +373,28 @@ namespace FaceID
                             FileInfo fi = new FileInfo(imageFilePath);
                             if (fi.Exists)
                             {
-                                //更新文件名
-                                FileInfo inf = new FileInfo(imageFilePath);
+
                                 if (!Directory.Exists(UserRegister + "\\RegisterUser\\"))//如果不存在就创建file文件夹　　             　　                
                                     Directory.CreateDirectory(UserRegister + "\\RegisterUser\\");//创建该文件夹　
 
-                                inf.MoveTo(UserRegister + "\\RegisterUser\\" + ouid.ToString() + ".jpg");
+                                fi.MoveTo(UserRegister + "\\RegisterUser\\" + ouid.ToString() + ".jpg");
 
-
-                                // 写文件内容
-                                if (!Directory.Exists(UserRegister))//如果不存在就创建file文件夹　　             　　                
-                                    Directory.CreateDirectory(UserRegister);//创建该文件夹　
-                                string filename = UserRegister + "\\" + string.Format("{0}.txt", 1);
-
-                                Log log = new Log(filename);
-                                log.log(UserRegister + "\\RegisterUser\\" + ouid.ToString() + ".jpg");
-                                log.log(faceresult);
+                                successlog = successlog + UserRegister + "\\RegisterUser\\" + ouid.ToString() + ".jpg";
+                                successlog = successlog + Environment.NewLine + faceresult;
+                              
                             }
-
-
-                            Environment.Exit(0);
-
+                         
                         }
                     }
                     catch (Exception ex)
                     {
                         // Rate limit is exceeded. Try again later.
                         //  log;
-                        string filename = UserRegister + string.Format("{0}.txt", System.DateTime.Now.ToString("yyyyMMdd"));
-                        Log log = new Log(filename);
-                        log.log(responseContent.ToString());
-                        log.log(ex.Message.ToString());
+
+                        //string filename = UserRegister + string.Format("{0}.txt", System.DateTime.Now.ToString("yyyyMMdd"));
+                        //Log log = new Log(filename);
+                        //log.log(responseContent.ToString());
+                        //log.log(ex.Message.ToString());
                     }
 
 
@@ -449,12 +404,12 @@ namespace FaceID
             catch (Exception ex)
             {
                 // 网络原因，不能连接接口
-                string filename = UserRegister + string.Format("{0}.txt", System.DateTime.Now.ToString("yyyyMMdd"));
-                Log log = new Log(filename);
-                log.log(ex.Message.ToString());
+                //string filename = UserRegister + string.Format("{0}.txt", System.DateTime.Now.ToString("yyyyMMdd"));
+                //Log log = new Log(filename);
+                //log.log(ex.Message.ToString());
             }
 
-            return 1;
+           
         }
 
 
@@ -502,7 +457,7 @@ namespace FaceID
                     rectFaceMarker.Visibility = Visibility.Visible;
 
                     // Show floating ID label
-                    lblFloatingId.Content = String.Format("用户人脸识别中...", userId);
+                    lblFloatingId.Content = String.Format("用户人脸正在登记中...", userId);
                     Canvas.SetLeft(lblFloatingId, faceRectangleX);
                     Canvas.SetTop(lblFloatingId, faceRectangleY - 20);
                     lblFloatingId.Visibility = Visibility.Visible;

@@ -28,7 +28,7 @@ namespace FaceID
                 System.IO.FileInfo fileInfo = new System.IO.FileInfo(logFile);
                 if (!fileInfo.Exists)
                 {
-                    fileStream = fileInfo.Create();
+                    fileStream = fileInfo.Create();//;
                     writer = new StreamWriter(fileStream);
                 }
                 else

@@ -58,8 +58,9 @@ namespace FaceID
         private int faceRectangleY;
         public string faceid, phonenumber, newfaceID="", filefullname = "";
 
-
-        CancellationTokenSource cts;
+        string errorlog = "", successlog = "";
+        int flag = 0;
+    
         public MainWindow()
         {
             InitializeComponent();
@@ -117,11 +118,9 @@ namespace FaceID
                 // 删除图片文件
                 Directory.Delete(UserPay + "\\Images\\", true);
             }
-             
 
             // Start SenseManage and configure the face module
             ConfigureRealSense();
-
             // Start the worker thread
             processingThread = new Thread(new ThreadStart(ProcessingThread));
             processingThread.Start();
@@ -173,11 +172,10 @@ namespace FaceID
             }
             catch (Exception ex)
             {
-                string filename = UserPay+ string.Format("{0}.txt", 0);
+                string filename = UserPay+ string.Format("{0}.txt", System.DateTime.Now.ToString("yyyyMMdd"));
                 Log log = new Log(filename);
                 log.log(ex.Message);
                 Environment.Exit(0);
-
             }
           
 
@@ -186,7 +184,7 @@ namespace FaceID
             faceModule.Dispose();
          }
 
-        private async void ProcessingThread()
+        private  void ProcessingThread()
         {
            
 
@@ -194,12 +192,30 @@ namespace FaceID
             while (senseManager.AcquireFrame(true) >= pxcmStatus.PXCM_STATUS_NO_ERROR)
             {
 
+                //写日志信息；
+                string errorfilename = UserPay + "\\" + string.Format("{0}.txt", 0);
+                string successfilename = UserPay + "\\" + string.Format("{0}.txt", 1);
                 if (newfaceID != "")
                 {
-                    VerifyRequest(filefullname, faceid, newfaceID);
+                        VerifyRequest(filefullname, faceid, newfaceID);
+                        if (errorlog != "")
+                        {
+                            Log log = new Log(errorfilename);
+                            log.log(errorlog);
+                            Environment.Exit(0);
+                            return;
+                        }
+                        if (successlog != "")
+                        {
+                            Log log = new Log(successfilename);
+                            log.log(successlog);
+                            Environment.Exit(0);
+                            return;
+                        }
+
                 }
 
-
+            
                 // Acquire the color image data
                 PXCMCapture.Sample sample = senseManager.QuerySample();
                 Bitmap colorBitmap;
@@ -235,13 +251,11 @@ namespace FaceID
                         {
                             // Retrieve the recognition data instance
                             recognitionData = face.QueryRecognition();
-
-
                             // 请求微软接口,计算用户照片是否可用
                             if (!Directory.Exists(UserPay + "\\Images\\"))//如果不存在就创建file文件夹　　             　　                
                                 Directory.CreateDirectory(UserPay + "\\Images\\");//创建该文件夹　
-                                                                                       //string imagefilename = System.Guid.NewGuid().ToString();
-                             filefullname = UserPay + "\\Images\\" + string.Format("{0}.jpg", face.QueryUserID().ToString(CultureInfo.InvariantCulture));
+                                                                                  //string imagefilename = System.Guid.NewGuid().ToString(); face.QueryUserID().ToString(CultureInfo.InvariantCulture)
+                            filefullname = UserPay + "\\Images\\" + string.Format("{0}.jpg", face.QueryUserID().ToString(CultureInfo.InvariantCulture));
 
                             if (!File.Exists(filefullname))
                             {
@@ -249,23 +263,14 @@ namespace FaceID
                             }
 
 
-                            //单独启动定时任务分析照片
-                            cts = new CancellationTokenSource();
-                            try
+                            lock (this)
                             {
-                                await AccessTheWebAsync(cts.Token);
-                                // resultsTextBox.Text += "\r\nDownloads complete.";
+                                if (newfaceID == "")
+                                {
+                                    ProcessIMAGES(filefullname);
+                                }
+                              
                             }
-                            catch (OperationCanceledException)
-                            {
-                                // resultsTextBox.Text += "\r\nDownloads canceled.\r\n";
-                            }
-                            catch (Exception)
-                            {
-                                //resultsTextBox.Text += "\r\nDownloads failed.\r\n";
-                            }
-
-                            cts = null;
 
                         }
                     }
@@ -279,43 +284,18 @@ namespace FaceID
                 UpdateUI(colorBitmap);
 
                 // Release resources
-                colorBitmap.Dispose();
+                if (colorBitmap != null)
+                {
+                    colorBitmap.Dispose();
+                }
+              
                 sample.color.ReleaseAccess(colorData);
                 sample.color.Dispose();
-
                 // Release the frame
                 senseManager.ReleaseFrame();
             }
         }
-
-        async Task AccessTheWebAsync(CancellationToken ct)
-        {
-
-            // Make a list of imagers;
-            List<string> imagesList = SetUpImagesList();
-
-            // ***Create a query that, when executed, returns a collection of tasks.
-            IEnumerable<Task<int>> AnalyzerImagesTasksQuery =
-                from image in imagesList select ProcessIMAGES(image, ct);
-
-            // ***Use ToList to execute the query and start the tasks. 
-            List<Task<int>> analyzerTasks = AnalyzerImagesTasksQuery.ToList();
-
-            // ***Add a loop to process the tasks one at a time until none remain.
-            while (analyzerTasks.Count > 0)
-            {
-                // Identify the first task that completes.
-                Task<int> firstFinishedTask = await Task.WhenAny(analyzerTasks);
-
-                // ***Remove the selected task from the list so that you don't
-                // process it more than once.
-                analyzerTasks.Remove(firstFinishedTask);
-
-                // Await the completed task.
-
-            }
-        }
-
+        
 
         private List<string> SetUpImagesList()
         {
@@ -331,15 +311,15 @@ namespace FaceID
             return images;
         }
 
-        async Task<int> ProcessIMAGES(string imageFilePath, CancellationToken ct)
+        async void ProcessIMAGES(string imageFilePath)
         {
-
+        
             try
             {
 
                 var client = new HttpClient();
                 // Request headers - replace this example key with your valid key.
-                client.DefaultRequestHeaders.Add("Ocp-Apim-Subscription-Key", "24772065efe543a7894d907a494c6a18");
+                client.DefaultRequestHeaders.Add("Ocp-Apim-Subscription-Key", "09dfdeb77fee410ba27ebc807ffd4ec8");
 
                 // Request parameters.
                 string queryString = "returnFaceId=true";
@@ -373,14 +353,14 @@ namespace FaceID
                     // 此位置识别不到您
                     try
                     {
-                        System.IO.File.Delete(imageFilePath);
-                        lblUserId.Content = "采集用户人脸无效,需要重新采集!";
+                        //System.IO.File.Delete(imageFilePath);
+                       // errorlog = errorlog + Environment.NewLine + string.Format("照片:{0},采集的脸部特征无效,需要重新采集!", imageFilePath);
                     }
                     catch (Exception ex)
                     {
-                        string filename = UserPay + string.Format("{0}.txt", System.DateTime.Now.ToString("yyyyMMdd"));
-                        Log log = new Log(filename);
-                        log.log(ex.Message.ToString());
+                        //string filename = UserPay + string.Format("{0}.txt", System.DateTime.Now.ToString("yyyyMMdd"));
+                        //Log log = new Log(filename);
+                        //log.log(ex.Message.ToString());
                     }
 
 
@@ -393,26 +373,22 @@ namespace FaceID
 
                         if (array.Count > 1)
                         {
-                            // 写文件内容
-                            if (!Directory.Exists(UserPay))//如果不存在就创建file文件夹　　             　　                
-                                Directory.CreateDirectory(UserPay);//创建该文件夹　
-                            string filename = UserPay + "\\" + string.Format("{0}.txt", 0);
-
-                            Log log = new Log(filename);
-                            log.log("能发现摄像头有人数:" + array.Count + " 注册失败！");
-
+                            //errorlog = errorlog + Environment.NewLine + string.Format("检测摄像头前有人数:" + array.Count + "人，不支持人脸支付！");
+                            return;
                         }
-
-
-                        JObject joResponse = JObject.Parse(array[0].ToString());
-                        newfaceID = joResponse["faceId"].ToString();
+                        else
+                        {
+                            JObject joResponse = JObject.Parse(array[0].ToString());
+                            newfaceID = joResponse["faceId"].ToString(); //计算比较用
+                        }
+                     
                     }
                     catch (Exception ex)
                     {
                         // Rate limit is exceeded. Try again later.
-                        string filename = UserPay + string.Format("{0}.txt", System.DateTime.Now.ToString("yyyyMMdd") );
-                        Log log = new Log(filename);
-                        log.log(ex.Message.ToString());
+                        //string filename = UserPay + string.Format("{0}.txt", System.DateTime.Now.ToString("yyyyMMdd") );
+                        //Log log = new Log(filename);
+                        //log.log(ex.Message.ToString());
                     }
 
                   
@@ -423,13 +399,12 @@ namespace FaceID
             {
                 // 网络原因，不能连接接口
 
-                string filename = UserPay+ string.Format("{0}.txt", System.DateTime.Now.ToString("yyyyMMdd"));
-                Log log = new Log(filename);
-                log.log(ex.Message.ToString());
+                //string filename = UserPay+ string.Format("{0}.txt", System.DateTime.Now.ToString("yyyyMMdd"));
+                //Log log = new Log(filename);
+                //log.log(ex.Message.ToString());
 
             }
 
-            return 1;
 
         }
 
@@ -438,13 +413,12 @@ namespace FaceID
 
         public async void VerifyRequest(string imageFilePath, string faceID, string newfaceID)
         {
-
             try
             {
 
                 var client = new HttpClient();
                 // Request headers - replace this example key with your valid key.
-                client.DefaultRequestHeaders.Add("Ocp-Apim-Subscription-Key", "24772065efe543a7894d907a494c6a18");
+                client.DefaultRequestHeaders.Add("Ocp-Apim-Subscription-Key", "09dfdeb77fee410ba27ebc807ffd4ec8");
 
                 // Request parameters.
                 string queryString = string.Format("faceId1={0}&faceId2={1}", faceID, newfaceID);
@@ -457,7 +431,6 @@ namespace FaceID
                 string responseContent;
 
                 
-        
                 // Request body
                 byte[] byteData = Encoding.UTF8.GetBytes("{\"faceId1\":\""+ faceID + "\",\"faceId2\":\""+ newfaceID + "\"}");
 
@@ -468,7 +441,6 @@ namespace FaceID
                     responseContent = response.Content.ReadAsStringAsync().Result;
                 }
 
-
                 //A peak at the JSON response.
                 if (responseContent == "[]")
                 {
@@ -476,13 +448,13 @@ namespace FaceID
                     // 此位置识别不到您
                     try
                     {
-                        lblUserId.Content = "用户人脸不匹配，无法实现刷脸支付!";
+                        errorlog = errorlog + Environment.NewLine + string.Format("刷脸支付：暂时不支持刷年支付，请联系管理员!", imageFilePath);
                     }
                     catch (Exception ex)
                     {
-                        string filename = UserPay + string.Format("{0}.txt", System.DateTime.Now.ToString("yyyyMMdd"));
-                        Log log = new Log(filename);
-                        log.log(ex.Message.ToString());
+                        //string filename = UserPay + string.Format("{0}.txt", System.DateTime.Now.ToString("yyyyMMdd"));
+                        //Log log = new Log(filename);
+                        //log.log(ex.Message.ToString());
                         //  throw;
                     }
 
@@ -496,54 +468,44 @@ namespace FaceID
                         string isIdentical = joResponse["isIdentical"].ToString();
                         string confidence = joResponse["confidence"].ToString();
 
+                        if (!Directory.Exists(UserPay + "\\FacePayImages\\"))//如果不存在就创建file文件夹　　             　　                
+                            Directory.CreateDirectory(UserPay + "\\FacePayImages\\");//创建该文件夹　
+
+
                         if (isIdentical.ToUpper() == "TRUE")
                         {
                             // 更新文件名
                             FileInfo fi = new FileInfo(imageFilePath);
                             if (fi.Exists)
                             {
-                                FileInfo inf = new FileInfo(imageFilePath);
 
-                                if (!Directory.Exists(UserPay + "\\FacePayImages\\"))//如果不存在就创建file文件夹　　             　　                
-                                    Directory.CreateDirectory(UserPay + "\\FacePayImages\\");//创建该文件夹　
-
-                                inf.MoveTo(UserPay + "\\FacePayImages\\" + newfaceID.ToString() + ".jpg");
+                                fi.MoveTo(UserPay + "\\FacePayImages\\" + newfaceID.ToString() + ".jpg");
                             }
 
-                            // 写文件内容
-                            if (!Directory.Exists(UserPay))//如果不存在就创建file文件夹　　             　　                
-                                Directory.CreateDirectory(UserPay);//创建该文件夹　
-                            string filename = UserPay + "\\" + string.Format("{0}.txt", 1);
-                            Log log = new Log(filename);
-                            log.log(phonenumber);
-                            log.log("FacePayImages:" + newfaceID+".jpg");
-                            log.log("isIdentical:" + isIdentical);
-                            log.log("confidence:" + confidence);
+                            successlog = successlog + Environment.NewLine + phonenumber;
+                            successlog = successlog + Environment.NewLine + "FacePayImages:" + newfaceID + ".jpg";
+                            successlog = successlog + Environment.NewLine + "isIdentical:" + isIdentical;
+                            successlog = successlog + Environment.NewLine + "confidence:" + confidence;
 
                             
                         }
                         else
                         {
-                            if (!Directory.Exists(UserPay))//如果不存在就创建file文件夹　　             　　                
-                                Directory.CreateDirectory(UserPay);//创建该文件夹　
-                            string filename = UserPay + "\\" + string.Format("{0}.txt", 0);
-                            Log log = new Log(filename);
-                            log.log(phonenumber);
-                            log.log("FacePayImages:" + newfaceID + ".jpg");
-                            log.log("isIdentical:" + isIdentical);
-                            log.log("confidence:" + confidence);
-                        }
 
-                        Environment.Exit(0);
+                            errorlog = errorlog + Environment.NewLine + phonenumber;
+                            errorlog = errorlog + Environment.NewLine + "FacePayImages:" + newfaceID + ".jpg";
+                            errorlog = errorlog + Environment.NewLine + "isIdentical:" + isIdentical;
+                            errorlog = errorlog + Environment.NewLine + "confidence:" + confidence;
+                        }
 
                     }
                     catch (Exception ex)
                     {
                         // Rate limit is exceeded. Try again later.
 
-                        string filename = UserPay+ string.Format("{0}.txt", System.DateTime.Now.ToString("yyyyMMdd") );
-                        Log log = new Log(filename);
-                        log.log(ex.Message.ToString());
+                        //string filename = UserPay+ string.Format("{0}.txt", System.DateTime.Now.ToString("yyyyMMdd") );
+                        //Log log = new Log(filename);
+                        //log.log(ex.Message.ToString());
 
                     }
 
@@ -553,12 +515,11 @@ namespace FaceID
             }
             catch (Exception ex)
             {
-                // 网络原因，不能连接接口
-                string filename = UserPay + string.Format("{0}.txt", System.DateTime.Now.ToString("yyyyMMdd"));
-                Log log = new Log(filename);
-                log.log(ex.Message.ToString());
+                //// 网络原因，不能连接接口
+                //string filename = UserPay + string.Format("{0}.txt", System.DateTime.Now.ToString("yyyyMMdd"));
+                //Log log = new Log(filename);
+                //log.log(ex.Message.ToString());
             }
-
 
 
         }
@@ -607,7 +568,7 @@ namespace FaceID
                     rectFaceMarker.Visibility = Visibility.Visible;
 
                     // Show floating ID label
-                    lblFloatingId.Content = String.Format("用户人脸识别中...", userId);
+                    lblFloatingId.Content = String.Format("人脸支付中...", userId);
                     Canvas.SetLeft(lblFloatingId, faceRectangleX);
                     Canvas.SetTop(lblFloatingId, faceRectangleY - 20);
                     lblFloatingId.Visibility = Visibility.Visible;
@@ -621,7 +582,11 @@ namespace FaceID
             }));
 
             // Release resources
-            bitmap.Dispose();
+            if (bitmap != null)
+            {
+                bitmap.Dispose();
+            }
+               
         }
 
         private void LoadDatabaseFromFile()
