@@ -192,28 +192,7 @@ namespace FaceID
             while (senseManager.AcquireFrame(true) >= pxcmStatus.PXCM_STATUS_NO_ERROR)
             {
 
-                //写日志信息；
-                string errorfilename = UserPay + "\\" + string.Format("{0}.txt", 0);
-                string successfilename = UserPay + "\\" + string.Format("{0}.txt", 1);
-                if (newfaceID != "")
-                {
-                        VerifyRequest(filefullname, faceid, newfaceID);
-                        if (errorlog != "")
-                        {
-                            Log log = new Log(errorfilename);
-                            log.log(errorlog);
-                            Environment.Exit(0);
-                            return;
-                        }
-                        if (successlog != "")
-                        {
-                            Log log = new Log(successfilename);
-                            log.log(successlog);
-                            Environment.Exit(0);
-                            return;
-                        }
-
-                }
+                
 
             
                 // Acquire the color image data
@@ -255,7 +234,7 @@ namespace FaceID
                             if (!Directory.Exists(UserPay + "\\Images\\"))//如果不存在就创建file文件夹　　             　　                
                                 Directory.CreateDirectory(UserPay + "\\Images\\");//创建该文件夹　
                                                                                   //string imagefilename = System.Guid.NewGuid().ToString(); face.QueryUserID().ToString(CultureInfo.InvariantCulture)
-                            filefullname = UserPay + "\\Images\\" + string.Format("{0}.jpg", face.QueryUserID().ToString(CultureInfo.InvariantCulture));
+                            filefullname = UserPay + "\\Images\\" + string.Format("{0}.jpg", System.Guid.NewGuid().ToString());
 
                             if (!File.Exists(filefullname))
                             {
@@ -270,6 +249,30 @@ namespace FaceID
                                     ProcessIMAGES(filefullname);
                                 }
                               
+                            }
+
+
+                            //写日志信息；
+                            string errorfilename = UserPay + "\\" + string.Format("{0}.txt", 0);
+                            string successfilename = UserPay + "\\" + string.Format("{0}.txt", 1);
+                            if (newfaceID != "")
+                            {
+                                VerifyRequest(filefullname, faceid, newfaceID);
+                                if (errorlog != "")
+                                {
+                                    Log log = new Log(errorfilename);
+                                    log.log(errorlog);
+                                    Environment.Exit(0);
+                                    return;
+                                }
+                                if (successlog != "")
+                                {
+                                    Log log = new Log(successfilename);
+                                    log.log(successlog);
+                                    Environment.Exit(0);
+                                    return;
+                                }
+
                             }
 
                         }
@@ -380,6 +383,14 @@ namespace FaceID
                         {
                             JObject joResponse = JObject.Parse(array[0].ToString());
                             newfaceID = joResponse["faceId"].ToString(); //计算比较用
+
+                            if (!Directory.Exists(UserPay + "\\FacePayImages\\"))//如果不存在就创建file文件夹　　             　　                
+                                Directory.CreateDirectory(UserPay + "\\FacePayImages\\");//创建该文件夹　
+                            FileInfo fi = new FileInfo(imageFilePath);
+                            if (fi.Exists)
+                            {
+                                fi.MoveTo(UserPay + "\\FacePayImages\\" + newfaceID.ToString() + ".jpg");
+                            }
                         }
                      
                     }
@@ -468,20 +479,12 @@ namespace FaceID
                         string isIdentical = joResponse["isIdentical"].ToString();
                         string confidence = joResponse["confidence"].ToString();
 
-                        if (!Directory.Exists(UserPay + "\\FacePayImages\\"))//如果不存在就创建file文件夹　　             　　                
-                            Directory.CreateDirectory(UserPay + "\\FacePayImages\\");//创建该文件夹　
+                      
 
 
                         if (isIdentical.ToUpper() == "TRUE")
                         {
-                            // 更新文件名
-                            FileInfo fi = new FileInfo(imageFilePath);
-                            if (fi.Exists)
-                            {
-
-                                fi.MoveTo(UserPay + "\\FacePayImages\\" + newfaceID.ToString() + ".jpg");
-                            }
-
+                           
                             successlog = successlog + Environment.NewLine + phonenumber;
                             successlog = successlog + Environment.NewLine + "FacePayImages:" + newfaceID + ".jpg";
                             successlog = successlog + Environment.NewLine + "isIdentical:" + isIdentical;

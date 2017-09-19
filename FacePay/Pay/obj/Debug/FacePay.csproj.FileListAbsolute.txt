@@ -162,3 +162,4 @@ C:\Clients\3 coodell\AIProject\AI\FacePay\FacePay\Pay\obj\Debug\FacePay.csproj.G
 C:\Clients\3 coodell\AIProject\AI\FacePay\FacePay\Pay\obj\Debug\FaceID.exe
 C:\Clients\3 coodell\AIProject\AI\FacePay\FacePay\Pay\obj\Debug\FaceID.pdb
 C:\Clients\3 coodell\AIProject\AI\FacePay\FacePay\Pay\bin\Debug\libpxcclr.cs.dll
+C:\Clients\3 coodell\AIProject\AI\FacePay\FacePay\Pay\obj\Debug\FacePay.csprojResolveAssemblyReference.cache
