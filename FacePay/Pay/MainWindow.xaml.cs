@@ -58,8 +58,8 @@ namespace FaceID
         private int faceRectangleY;
         public string faceid, phonenumber, newfaceID="", filefullname = "";
 
-        string errorlog = "", successlog = "";
-        int flag = 0;
+        string errorlog = "", errorlog3 = "",successlog = "";
+        int faces = 0;
     
         public MainWindow()
         {
@@ -192,9 +192,6 @@ namespace FaceID
             while (senseManager.AcquireFrame(true) >= pxcmStatus.PXCM_STATUS_NO_ERROR)
             {
 
-                
-
-            
                 // Acquire the color image data
                 PXCMCapture.Sample sample = senseManager.QuerySample();
                 Bitmap colorBitmap;
@@ -234,13 +231,21 @@ namespace FaceID
                             if (!Directory.Exists(UserPay + "\\Images\\"))//如果不存在就创建file文件夹　　             　　                
                                 Directory.CreateDirectory(UserPay + "\\Images\\");//创建该文件夹　
                                                                                   //string imagefilename = System.Guid.NewGuid().ToString(); face.QueryUserID().ToString(CultureInfo.InvariantCulture)
-                            filefullname = UserPay + "\\Images\\" + string.Format("{0}.jpg", System.Guid.NewGuid().ToString());
+                            filefullname = UserPay + "\\Images\\" + string.Format("{0}.jpg", face.QueryUserID().ToString(CultureInfo.InvariantCulture));
 
                             if (!File.Exists(filefullname))
                             {
                                 colorBitmap.Save(filefullname, System.Drawing.Imaging.ImageFormat.Jpeg);
                             }
 
+                            if (faces > 1)
+                            {
+                                string filename = UserPay + string.Format("{0}.txt", 2);
+                                Log log = new Log(filename);
+                                log.log(string.Format("检测摄像头前有人数:" + faces + "人，不支持人脸支付！"));
+                                Environment.Exit(0);
+                                return;
+                            }
 
                             lock (this)
                             {
@@ -255,6 +260,8 @@ namespace FaceID
                             //写日志信息；
                             string errorfilename = UserPay + "\\" + string.Format("{0}.txt", 0);
                             string successfilename = UserPay + "\\" + string.Format("{0}.txt", 1);
+                            string errorfilename3 = UserPay + "\\" + string.Format("{0}.txt", 3);
+
                             if (newfaceID != "")
                             {
                                 VerifyRequest(filefullname, faceid, newfaceID);
@@ -269,6 +276,13 @@ namespace FaceID
                                 {
                                     Log log = new Log(successfilename);
                                     log.log(successlog);
+                                    Environment.Exit(0);
+                                    return;
+                                }
+                                if (errorlog3 != "")
+                                {
+                                    Log log = new Log(errorfilename3);
+                                    log.log(errorlog3);
                                     Environment.Exit(0);
                                     return;
                                 }
@@ -321,16 +335,20 @@ namespace FaceID
             {
 
                 var client = new HttpClient();
-                // Request headers - replace this example key with your valid key.
-                client.DefaultRequestHeaders.Add("Ocp-Apim-Subscription-Key", "09dfdeb77fee410ba27ebc807ffd4ec8");
-
-                // Request parameters.
+               
+                /**亚洲版本 **/
+                client.DefaultRequestHeaders.Add("Ocp-Apim-Subscription-Key", "575223f6ffda4f03b73dc9c8a5cc4a29");
                 string queryString = "returnFaceId=true";
+                string uri = "https://southeastasia.api.cognitive.microsoft.com/face/v1.0/detect?" + queryString;
 
-                // NOTE: You must use the same region in your REST call as you used to obtain your subscription keys.
-                //   For example, if you obtained your subscription keys from westus, replace "westcentralus" in the 
-                //   URI below with "westus".
+
+                /**美国版本**/
+                /**
+                client.DefaultRequestHeaders.Add("Ocp-Apim-Subscription-Key", "24772065efe543a7894d907a494c6a18");
+                string queryString = "returnFaceId=true";
                 string uri = "https://westus.api.cognitive.microsoft.com/face/v1.0/detect?" + queryString;
+                **/
+
 
                 HttpResponseMessage response;
                 string responseContent;
@@ -376,7 +394,11 @@ namespace FaceID
 
                         if (array.Count > 1)
                         {
-                            //errorlog = errorlog + Environment.NewLine + string.Format("检测摄像头前有人数:" + array.Count + "人，不支持人脸支付！");
+                            faces = array.Count;
+                            string filename = UserPay + string.Format("{0}.txt",2);
+                            Log log = new Log(filename);
+                            log.log(string.Format("检测摄像头前有人数:" + array.Count + "人，不支持人脸支付！"));
+                            Environment.Exit(0);
                             return;
                         }
                         else
@@ -428,16 +450,21 @@ namespace FaceID
             {
 
                 var client = new HttpClient();
-                // Request headers - replace this example key with your valid key.
-                client.DefaultRequestHeaders.Add("Ocp-Apim-Subscription-Key", "09dfdeb77fee410ba27ebc807ffd4ec8");
-
-                // Request parameters.
+               
+                /**亚洲版本**/
+                client.DefaultRequestHeaders.Add("Ocp-Apim-Subscription-Key", "575223f6ffda4f03b73dc9c8a5cc4a29");
                 string queryString = string.Format("faceId1={0}&faceId2={1}", faceID, newfaceID);
+                string uri = "https://southeastasia.api.cognitive.microsoft.com/face/v1.0/verify?" + queryString;
+                // old ?
 
-                // NOTE: You must use the same region in your REST call as you used to obtain your subscription keys.
-                //   For example, if you obtained your subscription keys from westus, replace "westcentralus" in the 
-                //   URI below with "westus".
+                /**美国版本**/
+                /**
+                client.DefaultRequestHeaders.Add("Ocp-Apim-Subscription-Key", "24772065efe543a7894d907a494c6a18");
+                string queryString = string.Format("faceId1={0}&faceId2={1}", faceID, newfaceID);
                 string uri = "https://westus.api.cognitive.microsoft.com/face/v1.0/verify?" + queryString;
+                **/
+
+
                 HttpResponseMessage response;
                 string responseContent;
 
@@ -475,31 +502,41 @@ namespace FaceID
                 {
                     try
                     {
+                        string isIdentical="", confidence = "";
                         JObject joResponse = JObject.Parse(responseContent);
-                        string isIdentical = joResponse["isIdentical"].ToString();
-                        string confidence = joResponse["confidence"].ToString();
 
-                      
-
-
-                        if (isIdentical.ToUpper() == "TRUE")
+                        if (joResponse["error"] is null)
                         {
-                           
-                            successlog = successlog + Environment.NewLine + phonenumber;
-                            successlog = successlog + Environment.NewLine + "FacePayImages:" + newfaceID + ".jpg";
-                            successlog = successlog + Environment.NewLine + "isIdentical:" + isIdentical;
-                            successlog = successlog + Environment.NewLine + "confidence:" + confidence;
+                            isIdentical = joResponse["isIdentical"].ToString();
+                            confidence = joResponse["confidence"].ToString();
 
-                            
+                            if (isIdentical.ToUpper() == "TRUE")
+                            {
+
+                                successlog = successlog + Environment.NewLine + phonenumber;
+                                successlog = successlog + Environment.NewLine + "FacePayImages:" + newfaceID + ".jpg";
+                                successlog = successlog + Environment.NewLine + "isIdentical:" + isIdentical;
+                                successlog = successlog + Environment.NewLine + "confidence:" + confidence;
+                            }
+                            else
+                            {
+                                errorlog = errorlog + Environment.NewLine + phonenumber;
+                                errorlog = errorlog + Environment.NewLine + "FacePayImages:" + newfaceID + ".jpg";
+                                errorlog = errorlog + Environment.NewLine + "isIdentical:" + isIdentical;
+                                errorlog = errorlog + Environment.NewLine + "confidence:" + confidence;
+                            }
                         }
                         else
                         {
-
-                            errorlog = errorlog + Environment.NewLine + phonenumber;
-                            errorlog = errorlog + Environment.NewLine + "FacePayImages:" + newfaceID + ".jpg";
-                            errorlog = errorlog + Environment.NewLine + "isIdentical:" + isIdentical;
-                            errorlog = errorlog + Environment.NewLine + "confidence:" + confidence;
+                            // 排除限制支付
+                            if (joResponse["error"]["code"].ToString() != "RateLimitExceeded")
+                            {
+                                errorlog3 = errorlog3 + Environment.NewLine + joResponse["error"]["code"].ToString();
+                                errorlog3 = errorlog3 + Environment.NewLine + joResponse["error"]["message"].ToString();
+                            }
                         }
+                        
+                     
 
                     }
                     catch (Exception ex)

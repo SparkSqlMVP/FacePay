@@ -284,16 +284,18 @@ namespace FaceID
             {
                 var client = new HttpClient();
 
-                // Request headers - replace this example key with your valid key.
-                client.DefaultRequestHeaders.Add("Ocp-Apim-Subscription-Key", "24772065efe543a7894d907a494c6a18");
-
-                // Request parameters.
+                /**亚洲版本**/
+                client.DefaultRequestHeaders.Add("Ocp-Apim-Subscription-Key", "575223f6ffda4f03b73dc9c8a5cc4a29");
                 string queryString = "returnFaceId=true&returnFaceLandmarks=false&returnFaceAttributes=age,gender,smile,glasses,emotion";
+                string uri = "https://southeastasia.api.cognitive.microsoft.com/face/v1.0/detect?" + queryString;
 
-                // NOTE: You must use the same region in your REST call as you used to obtain your subscription keys.
-                //   For example, if you obtained your subscription keys from westus, replace "westcentralus" in the 
-                //   URI below with "westus".
-                string uri = "https://westus.api.cognitive.microsoft.com/face/v1.0/detect?" + queryString;
+                /**美国版本**/
+                /**
+                  client.DefaultRequestHeaders.Add("Ocp-Apim-Subscription-Key", "24772065efe543a7894d907a494c6a18");
+                  string queryString = "returnFaceId=true&returnFaceLandmarks=false&returnFaceAttributes=age,gender,smile,glasses,emotion";
+                  string uri = "https://westus.api.cognitive.microsoft.com/face/v1.0/detect?" + queryString;
+                **/
+
 
                 HttpResponseMessage response;
                 string responseContent;
