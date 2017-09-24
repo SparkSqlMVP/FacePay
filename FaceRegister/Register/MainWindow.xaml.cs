@@ -27,6 +27,8 @@ using System.Globalization;
 using System.Threading.Tasks;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.InteropServices;
+using System.Windows.Interop;
 
 namespace FaceID
 {
@@ -56,12 +58,20 @@ namespace FaceID
 
         string errorlog="", successlog = "";
         int flat = 0;
+        int count = 0;
+        private const int GWL_STYLE = -16;
+        private const int WS_SYSMENU = 0x80000;
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern int GetWindowLong(IntPtr hWnd, int nIndex);
+        [DllImport("user32.dll")]
+        private static extern int SetWindowLong(IntPtr hWnd, int nIndex, int dwNewLong);
 
         public  MainWindow()
         {
+
             InitializeComponent();
             rectFaceMarker.Visibility = Visibility.Hidden;
-            chkShowFaceMarker.IsChecked = true;
+           
             numFacesDetected = 0;
             userId = string.Empty;
             dbState = string.Empty;
@@ -97,7 +107,10 @@ namespace FaceID
             processingThread.Start();
 
         }
-
+        protected override void OnClosing(System.ComponentModel.CancelEventArgs e)
+        {
+            e.Cancel = true;
+        }
         private  void ConfigureRealSense()
         {
             PXCMFaceModule faceModule;
@@ -161,7 +174,15 @@ namespace FaceID
                 //写日志信息；
                 string errorfilename = UserRegister + "\\" + string.Format("{0}.txt", 0);
                 string successfilename = UserRegister + "\\" + string.Format("{0}.txt", 1);
+                string networkfilename = UserRegister + "\\" + string.Format("{0}.txt", 4);
+                if (count > 15)
+                {
+                    Log log = new Log(networkfilename);
+                    log.log("网络异常请重试"+ count.ToString());
+                    Environment.Exit(0);
+                    return;
 
+                }
                 if (errorlog != "" & flat==1)
                 {
                     Log log = new Log(errorfilename);
@@ -175,7 +196,6 @@ namespace FaceID
                     Log log = new Log(successfilename);
                     log.log(successlog);
                    
-
                     Environment.Exit(0);
                     return;
                 }
@@ -222,7 +242,7 @@ namespace FaceID
                             if (!Directory.Exists(UserRegister + "\\Images\\"))//如果不存在就创建file文件夹　　             　　                
                                 Directory.CreateDirectory(UserRegister + "\\Images\\");//创建该文件夹　
                                                                                        //string imagefilename = System.Guid.NewGuid().ToString(); face.QueryUserID().ToString(CultureInfo.InvariantCulture)
-                            string filefullname = UserRegister + "\\Images\\" + string.Format("{0}.jpg", face.QueryUserID().ToString(CultureInfo.InvariantCulture));
+                            string filefullname = UserRegister + "\\Images\\" + string.Format("{0}.jpg", System.Guid.NewGuid().ToString());
 
                             if (!File.Exists(filefullname))
                             {
@@ -231,11 +251,8 @@ namespace FaceID
 
                             lock (this)
                             {
-                                if (flat == 0)
-                                {
-                                    ProcessIMAGES(filefullname);
-                                }
-                               
+                                ProcessIMAGES(filefullname);
+
                             }
                         }
                     }
@@ -318,21 +335,6 @@ namespace FaceID
                 if (responseContent == "[]")
                 {
 
-                    // 此位置识别不到您
-                    try
-                    {
-                       // System.IO.File.Delete(imageFilePath);
-                        // lblUserId.Content = "采集用户人脸无效,需要重新采集!";
-                        errorlog = errorlog + Environment.NewLine + string.Format("照片:{0},采集的脸部特征无效,需要重新采集!", imageFilePath);
-                       
-                    }
-                    catch (Exception ex)
-                    {
-                        ////  log;
-                        //string filename = UserRegister + string.Format("{0}.txt", System.DateTime.Now.ToString("yyyyMMdd"));
-                        //Log log = new Log(filename);
-                        //log.log(ex.Message.ToString());
-                    }
 
                 }
                 else
@@ -390,9 +392,9 @@ namespace FaceID
                     }
                     catch (Exception ex)
                     {
-                        // Rate limit is exceeded. Try again later.
-                        //  log;
+                       
 
+                       // System.Threading.Thread.Sleep(5000);  // Rate limit is exceeded. Try again later.
                         //string filename = UserRegister + string.Format("{0}.txt", System.DateTime.Now.ToString("yyyyMMdd"));
                         //Log log = new Log(filename);
                         //log.log(responseContent.ToString());
@@ -406,9 +408,8 @@ namespace FaceID
             catch (Exception ex)
             {
                 // 网络原因，不能连接接口
-                //string filename = UserRegister + string.Format("{0}.txt", System.DateTime.Now.ToString("yyyyMMdd"));
-                //Log log = new Log(filename);
-                //log.log(ex.Message.ToString());
+                count = count + 1;
+                System.Threading.Thread.Sleep(5000);
             }
 
            
@@ -433,10 +434,6 @@ namespace FaceID
                     imgColorStream.Source = ConvertBitmap.BitmapToBitmapSource(bitmap);
                 }
 
-                 // Update UI elements
-                lblNumFacesDetected.Content = String.Format("Faces Detected: {0}", numFacesDetected);
-                lblUserId.Content = String.Format("User ID: {0}", userId);
-                lblDatabaseState.Content = String.Format("Database: {0}", dbState);
 
                 // Change picture border color depending on if user is in camera view
                 if (numFacesDetected > 0)
@@ -449,7 +446,7 @@ namespace FaceID
                 }
 
                 // Show or hide face marker
-                if ((numFacesDetected > 0) && (chkShowFaceMarker.IsChecked == true))
+                if ((numFacesDetected > 0) )
                 {
                     // Show face marker
                     rectFaceMarker.Height = faceRectangleHeight;
@@ -545,6 +542,25 @@ namespace FaceID
             this.Close();
             
         }
+
+        private void Label_Loaded(object sender, RoutedEventArgs e)
+        {
+
+            var hwnd = new WindowInteropHelper(this).Handle;
+            SetWindowLong(hwnd, GWL_STYLE, GetWindowLong(hwnd, GWL_STYLE) & ~WS_SYSMENU);
+
+            // 设置全屏  
+            this.WindowState = System.Windows.WindowState.Normal;
+            this.WindowStyle = System.Windows.WindowStyle.None;
+            this.ResizeMode = System.Windows.ResizeMode.NoResize;
+       
+            this.Left = 0.0;
+            this.Top = 0.0;
+            this.Width = System.Windows.SystemParameters.PrimaryScreenWidth;
+            this.Height = System.Windows.SystemParameters.PrimaryScreenHeight;
+        }
+
+
         private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
         {
             ReleaseResources();

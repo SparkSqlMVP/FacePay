@@ -28,6 +28,8 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Collections.Generic;
 using System.Linq;
+using System.Windows.Interop;
+using System.Runtime.InteropServices;
 
 namespace FaceID
 {
@@ -59,8 +61,14 @@ namespace FaceID
         public string faceid, phonenumber, newfaceID="", filefullname = "";
 
         string errorlog = "", errorlog3 = "",successlog = "";
-        int faces = 0;
-    
+        int faces = 0, count = 0;
+
+        private const int GWL_STYLE = -16;
+        private const int WS_SYSMENU = 0x80000;
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern int GetWindowLong(IntPtr hWnd, int nIndex);
+        [DllImport("user32.dll")]
+        private static extern int SetWindowLong(IntPtr hWnd, int nIndex, int dwNewLong);
         public MainWindow()
         {
             InitializeComponent();
@@ -92,7 +100,6 @@ namespace FaceID
             }
 
             rectFaceMarker.Visibility = Visibility.Hidden;
-            chkShowFaceMarker.IsChecked = true;
             numFacesDetected = 0;
             userId = string.Empty;
             dbState = string.Empty;
@@ -127,7 +134,10 @@ namespace FaceID
 
             
         }
-
+        protected override void OnClosing(System.ComponentModel.CancelEventArgs e)
+        {
+            e.Cancel = true;
+        }
         private void ConfigureRealSense()
         {
             PXCMFaceModule faceModule;
@@ -191,7 +201,7 @@ namespace FaceID
             // Start AcquireFrame/ReleaseFrame loop
             while (senseManager.AcquireFrame(true) >= pxcmStatus.PXCM_STATUS_NO_ERROR)
             {
-
+               
                 // Acquire the color image data
                 PXCMCapture.Sample sample = senseManager.QuerySample();
                 Bitmap colorBitmap;
@@ -231,7 +241,8 @@ namespace FaceID
                             if (!Directory.Exists(UserPay + "\\Images\\"))//如果不存在就创建file文件夹　　             　　                
                                 Directory.CreateDirectory(UserPay + "\\Images\\");//创建该文件夹　
                                                                                   //string imagefilename = System.Guid.NewGuid().ToString(); face.QueryUserID().ToString(CultureInfo.InvariantCulture)
-                            filefullname = UserPay + "\\Images\\" + string.Format("{0}.jpg", face.QueryUserID().ToString(CultureInfo.InvariantCulture));
+                            filefullname = UserPay + "\\Images\\" + string.Format("{0}.jpg",
+                                System.Guid.NewGuid().ToString());
 
                             if (!File.Exists(filefullname))
                             {
@@ -261,6 +272,14 @@ namespace FaceID
                             string errorfilename = UserPay + "\\" + string.Format("{0}.txt", 0);
                             string successfilename = UserPay + "\\" + string.Format("{0}.txt", 1);
                             string errorfilename3 = UserPay + "\\" + string.Format("{0}.txt", 3);
+                            string networkfilename = UserPay + "\\" + string.Format("{0}.txt", 4);
+                            if (count > 30)
+                            {
+                                Log log = new Log(networkfilename);
+                                log.log("网络异常请重试次数" + count.ToString());
+                                Environment.Exit(0);
+                                return;
+                            }
 
                             if (newfaceID != "")
                             {
@@ -341,7 +360,6 @@ namespace FaceID
                 string queryString = "returnFaceId=true";
                 string uri = "https://southeastasia.api.cognitive.microsoft.com/face/v1.0/detect?" + queryString;
 
-
                 /**美国版本**/
                 /**
                 client.DefaultRequestHeaders.Add("Ocp-Apim-Subscription-Key", "24772065efe543a7894d907a494c6a18");
@@ -371,19 +389,7 @@ namespace FaceID
                 if (responseContent == "[]")
                 {
 
-                    // 此位置识别不到您
-                    try
-                    {
-                        //System.IO.File.Delete(imageFilePath);
-                       // errorlog = errorlog + Environment.NewLine + string.Format("照片:{0},采集的脸部特征无效,需要重新采集!", imageFilePath);
-                    }
-                    catch (Exception ex)
-                    {
-                        //string filename = UserPay + string.Format("{0}.txt", System.DateTime.Now.ToString("yyyyMMdd"));
-                        //Log log = new Log(filename);
-                        //log.log(ex.Message.ToString());
-                    }
-
+                   
 
                 }
                 else
@@ -418,10 +424,7 @@ namespace FaceID
                     }
                     catch (Exception ex)
                     {
-                        // Rate limit is exceeded. Try again later.
-                        //string filename = UserPay + string.Format("{0}.txt", System.DateTime.Now.ToString("yyyyMMdd") );
-                        //Log log = new Log(filename);
-                        //log.log(ex.Message.ToString());
+                      
                     }
 
                   
@@ -432,6 +435,9 @@ namespace FaceID
             {
                 // 网络原因，不能连接接口
 
+                count = count + 1;
+                System.Threading.Thread.Sleep(5000);
+       
                 //string filename = UserPay+ string.Format("{0}.txt", System.DateTime.Now.ToString("yyyyMMdd"));
                 //Log log = new Log(filename);
                 //log.log(ex.Message.ToString());
@@ -541,8 +547,7 @@ namespace FaceID
                     }
                     catch (Exception ex)
                     {
-                        // Rate limit is exceeded. Try again later.
-
+                        System.Threading.Thread.Sleep(5000);  // Rate limit is exceeded. Try again later.
                         //string filename = UserPay+ string.Format("{0}.txt", System.DateTime.Now.ToString("yyyyMMdd") );
                         //Log log = new Log(filename);
                         //log.log(ex.Message.ToString());
@@ -555,10 +560,8 @@ namespace FaceID
             }
             catch (Exception ex)
             {
-                //// 网络原因，不能连接接口
-                //string filename = UserPay + string.Format("{0}.txt", System.DateTime.Now.ToString("yyyyMMdd"));
-                //Log log = new Log(filename);
-                //log.log(ex.Message.ToString());
+                count = count + 1;
+                System.Threading.Thread.Sleep(5000);
             }
 
 
@@ -582,10 +585,7 @@ namespace FaceID
                     imgColorStream.Source = ConvertBitmap.BitmapToBitmapSource(bitmap);
                 }
 
-                 // Update UI elements
-                lblNumFacesDetected.Content = String.Format("Faces Detected: {0}", numFacesDetected);
-                lblUserId.Content = String.Format("User ID: {0}", userId);
-                lblDatabaseState.Content = String.Format("Database: {0}", dbState);
+              
 
                 // Change picture border color depending on if user is in camera view
                 if (numFacesDetected > 0)
@@ -598,7 +598,7 @@ namespace FaceID
                 }
 
                 // Show or hide face marker
-                if ((numFacesDetected > 0) && (chkShowFaceMarker.IsChecked == true))
+                if ((numFacesDetected > 0))
                 {
                     // Show face marker
                     rectFaceMarker.Height = faceRectangleHeight;
@@ -670,6 +670,22 @@ namespace FaceID
             {
                 dbState = "Not Found";
             }
+        }
+
+        private void Window_Loaded(object sender, RoutedEventArgs e)
+        {
+            var hwnd = new WindowInteropHelper(this).Handle;
+            SetWindowLong(hwnd, GWL_STYLE, GetWindowLong(hwnd, GWL_STYLE) & ~WS_SYSMENU);
+
+            // 设置全屏  
+            this.WindowState = System.Windows.WindowState.Normal;
+            this.WindowStyle = System.Windows.WindowStyle.None;
+            this.ResizeMode = System.Windows.ResizeMode.NoResize;
+
+            this.Left = 0.0;
+            this.Top = 0.0;
+            this.Width = System.Windows.SystemParameters.PrimaryScreenWidth;
+            this.Height = System.Windows.SystemParameters.PrimaryScreenHeight;
         }
 
         private void ReleaseResources()

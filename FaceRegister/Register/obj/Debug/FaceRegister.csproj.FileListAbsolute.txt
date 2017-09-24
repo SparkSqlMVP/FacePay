@@ -125,6 +125,7 @@ C:\Clients\3 coodell\AIProject\AI\FacePay\SignUp\Register\obj\Debug\FaceRegister
 C:\Clients\3 coodell\AIProject\AI\FacePay\FaceRegister\Register\bin\Debug\FaceID.exe.config
 C:\Clients\3 coodell\AIProject\AI\FacePay\FaceRegister\Register\bin\Debug\FaceID.exe
 C:\Clients\3 coodell\AIProject\AI\FacePay\FaceRegister\Register\bin\Debug\FaceID.pdb
+C:\Clients\3 coodell\AIProject\AI\FacePay\FaceRegister\Register\bin\Debug\libpxcclr.cs.dll
 C:\Clients\3 coodell\AIProject\AI\FacePay\FaceRegister\Register\bin\Debug\Newtonsoft.Json.dll
 C:\Clients\3 coodell\AIProject\AI\FacePay\FaceRegister\Register\bin\Debug\Newtonsoft.Json.xml
 C:\Clients\3 coodell\AIProject\AI\FacePay\FaceRegister\Register\obj\Debug\MainWindow.baml
@@ -136,5 +137,3 @@ C:\Clients\3 coodell\AIProject\AI\FacePay\FaceRegister\Register\obj\Debug\FaceID
 C:\Clients\3 coodell\AIProject\AI\FacePay\FaceRegister\Register\obj\Debug\FaceRegister.csproj.GenerateResource.Cache
 C:\Clients\3 coodell\AIProject\AI\FacePay\FaceRegister\Register\obj\Debug\FaceID.exe
 C:\Clients\3 coodell\AIProject\AI\FacePay\FaceRegister\Register\obj\Debug\FaceID.pdb
-C:\Clients\3 coodell\AIProject\AI\FacePay\FaceRegister\Register\bin\Debug\libpxcclr.cs.dll
-C:\Clients\3 coodell\AIProject\AI\FacePay\FaceRegister\Register\obj\Debug\FaceRegister.csprojResolveAssemblyReference.cache

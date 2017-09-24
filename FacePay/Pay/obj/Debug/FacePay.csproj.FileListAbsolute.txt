@@ -144,6 +144,7 @@ C:\Clients\3 coodell\AIProject\ArtificialIntelligence\FacePay\Pay\obj\Debug\Face
 C:\Clients\3 coodell\AIProject\AI\FacePay\FacePay\Pay\bin\Debug\FaceID.exe.config
 C:\Clients\3 coodell\AIProject\AI\FacePay\FacePay\Pay\bin\Debug\FaceID.exe
 C:\Clients\3 coodell\AIProject\AI\FacePay\FacePay\Pay\bin\Debug\FaceID.pdb
+C:\Clients\3 coodell\AIProject\AI\FacePay\FacePay\Pay\bin\Debug\libpxcclr.cs.dll
 C:\Clients\3 coodell\AIProject\AI\FacePay\FacePay\Pay\bin\Debug\MySql.Data.dll
 C:\Clients\3 coodell\AIProject\AI\FacePay\FacePay\Pay\bin\Debug\Newtonsoft.Json.dll
 C:\Clients\3 coodell\AIProject\AI\FacePay\FacePay\Pay\bin\Debug\Newtonsoft.Json.xml
@@ -161,5 +162,4 @@ C:\Clients\3 coodell\AIProject\AI\FacePay\FacePay\Pay\obj\Debug\FaceID.Propertie
 C:\Clients\3 coodell\AIProject\AI\FacePay\FacePay\Pay\obj\Debug\FacePay.csproj.GenerateResource.Cache
 C:\Clients\3 coodell\AIProject\AI\FacePay\FacePay\Pay\obj\Debug\FaceID.exe
 C:\Clients\3 coodell\AIProject\AI\FacePay\FacePay\Pay\obj\Debug\FaceID.pdb
-C:\Clients\3 coodell\AIProject\AI\FacePay\FacePay\Pay\bin\Debug\libpxcclr.cs.dll
 C:\Clients\3 coodell\AIProject\AI\FacePay\FacePay\Pay\obj\Debug\FacePay.csprojResolveAssemblyReference.cache
