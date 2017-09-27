@@ -58,9 +58,9 @@ namespace FaceID
         private int faceRectangleWidth;
         private int faceRectangleX;
         private int faceRectangleY;
-        public string faceid, phonenumber, newfaceID="", filefullname = "";
+        public string faceListId, phonenumber, newfaceID="", filefullname = "";
 
-        string errorlog = "", errorlog3 = "",successlog = "";
+        string useimages="",successlog = "";
         int faces = 0, count = 0;
 
         private const int GWL_STYLE = -16;
@@ -80,7 +80,7 @@ namespace FaceID
                 if (lines.Length == 2)
                 {
                     phonenumber = lines[0];
-                    faceid = lines[1];
+                    faceListId = lines[1];
                 }
                 else
                 {
@@ -201,7 +201,34 @@ namespace FaceID
             // Start AcquireFrame/ReleaseFrame loop
             while (senseManager.AcquireFrame(true) >= pxcmStatus.PXCM_STATUS_NO_ERROR)
             {
-               
+
+
+                if (newfaceID != "")
+                {
+                    VerifyRequest(newfaceID, faceListId);
+
+                    //写日志信息；
+                    string successfilename = UserPay + "\\" + string.Format("{0}.txt", 1);
+                    string networkfilename = UserPay + "\\" + string.Format("{0}.txt", 4);
+
+                    if (count > 200)
+                    {
+                        Log log = new Log(networkfilename);
+                        log.log("网络异常请重试" + count.ToString());
+                        Environment.Exit(0);
+                        return;
+                    }
+
+                    if (successlog != "")
+                    {
+                        Log log = new Log(successfilename);
+                        log.log(successlog);
+                        Environment.Exit(0);
+                        return;
+                    }
+                }
+
+
                 // Acquire the color image data
                 PXCMCapture.Sample sample = senseManager.QuerySample();
                 Bitmap colorBitmap;
@@ -253,7 +280,7 @@ namespace FaceID
                             {
                                 string filename = UserPay + string.Format("{0}.txt", 2);
                                 Log log = new Log(filename);
-                                log.log(string.Format("检测摄像头前有人数:" + faces + "人，不支持人脸支付！"));
+                                log.log(string.Format("检测摄像头前有人数 RealSense:" + faces + "人，不支持人脸支付！"));
                                 Environment.Exit(0);
                                 return;
                             }
@@ -268,45 +295,9 @@ namespace FaceID
                             }
 
 
-                            //写日志信息；
-                            string errorfilename = UserPay + "\\" + string.Format("{0}.txt", 0);
-                            string successfilename = UserPay + "\\" + string.Format("{0}.txt", 1);
-                            string errorfilename3 = UserPay + "\\" + string.Format("{0}.txt", 3);
-                            string networkfilename = UserPay + "\\" + string.Format("{0}.txt", 4);
-                            if (count > 30)
-                            {
-                                Log log = new Log(networkfilename);
-                                log.log("网络异常请重试次数" + count.ToString());
-                                Environment.Exit(0);
-                                return;
-                            }
 
-                            if (newfaceID != "")
-                            {
-                                VerifyRequest(filefullname, faceid, newfaceID);
-                                if (errorlog != "")
-                                {
-                                    Log log = new Log(errorfilename);
-                                    log.log(errorlog);
-                                    Environment.Exit(0);
-                                    return;
-                                }
-                                if (successlog != "")
-                                {
-                                    Log log = new Log(successfilename);
-                                    log.log(successlog);
-                                    Environment.Exit(0);
-                                    return;
-                                }
-                                if (errorlog3 != "")
-                                {
-                                    Log log = new Log(errorfilename3);
-                                    log.log(errorlog3);
-                                    Environment.Exit(0);
-                                    return;
-                                }
+                          
 
-                            }
 
                         }
                     }
@@ -349,220 +340,114 @@ namespace FaceID
 
         async void ProcessIMAGES(string imageFilePath)
         {
-        
-            try
+
+            count = count + 1;
+            var client = new HttpClient();
+            // Request headers
+            client.DefaultRequestHeaders.Add("Ocp-Apim-Subscription-Key", "575223f6ffda4f03b73dc9c8a5cc4a29");
+            string queryString = "returnFaceId=true";// string.Format("userData={0}&targetFace={1}", "sample_list2", "2222222");
+
+            var uri = string.Format("https://southeastasia.api.cognitive.microsoft.com/face/v1.0/detect?") + queryString;
+            HttpResponseMessage response;
+            string responseContent;
+            // Request body
+            byte[] byteData = GetImageAsByteArray(imageFilePath);
+            using (var content = new ByteArrayContent(byteData))
             {
-
-                var client = new HttpClient();
-               
-                /**亚洲版本 **/
-                client.DefaultRequestHeaders.Add("Ocp-Apim-Subscription-Key", "575223f6ffda4f03b73dc9c8a5cc4a29");
-                string queryString = "returnFaceId=true";
-                string uri = "https://southeastasia.api.cognitive.microsoft.com/face/v1.0/detect?" + queryString;
-
-                /**美国版本**/
-                /**
-                client.DefaultRequestHeaders.Add("Ocp-Apim-Subscription-Key", "24772065efe543a7894d907a494c6a18");
-                string queryString = "returnFaceId=true";
-                string uri = "https://westus.api.cognitive.microsoft.com/face/v1.0/detect?" + queryString;
-                **/
-
-
-                HttpResponseMessage response;
-                string responseContent;
-
-                // Request body. Try this sample with a locally stored JPEG image.
-                byte[] byteData = GetImageAsByteArray(imageFilePath);
-
-                using (var content = new ByteArrayContent(byteData))
-                {
-                    // This example uses content type "application/octet-stream".
-                    // The other content types you can use are "application/json" and "multipart/form-data".
-                    content.Headers.ContentType = new MediaTypeHeaderValue("application/octet-stream");
-                    response = await client.PostAsync(uri, content);
-                    responseContent = response.Content.ReadAsStringAsync().Result;
-                }
-
-                //A peak at the JSON response.
-                //Console.WriteLine(responseContent);
-            
-                if (responseContent == "[]")
-                {
-
-                   
-
-                }
-                else
-                {
-                    try
-                    {
-                        JArray array = JArray.Parse(responseContent);
-
-                        if (array.Count > 1)
-                        {
-                            faces = array.Count;
-                            string filename = UserPay + string.Format("{0}.txt",2);
-                            Log log = new Log(filename);
-                            log.log(string.Format("检测摄像头前有人数:" + array.Count + "人，不支持人脸支付！"));
-                            Environment.Exit(0);
-                            return;
-                        }
-                        else
-                        {
-                            JObject joResponse = JObject.Parse(array[0].ToString());
-                            newfaceID = joResponse["faceId"].ToString(); //计算比较用
-
-                            if (!Directory.Exists(UserPay + "\\FacePayImages\\"))//如果不存在就创建file文件夹　　             　　                
-                                Directory.CreateDirectory(UserPay + "\\FacePayImages\\");//创建该文件夹　
-                            FileInfo fi = new FileInfo(imageFilePath);
-                            if (fi.Exists)
-                            {
-                                fi.MoveTo(UserPay + "\\FacePayImages\\" + newfaceID.ToString() + ".jpg");
-                            }
-                        }
-                     
-                    }
-                    catch (Exception ex)
-                    {
-                      
-                    }
-
-                  
-                }
-
-            }
-            catch (Exception ex)
-            {
-                // 网络原因，不能连接接口
-
-                count = count + 1;
-                System.Threading.Thread.Sleep(5000);
-       
-                //string filename = UserPay+ string.Format("{0}.txt", System.DateTime.Now.ToString("yyyyMMdd"));
-                //Log log = new Log(filename);
-                //log.log(ex.Message.ToString());
-
+                content.Headers.ContentType = new MediaTypeHeaderValue("application/octet-stream");
+                response = await client.PostAsync(uri, content);
+                responseContent = response.Content.ReadAsStringAsync().Result;
             }
 
+            if (response.StatusCode == System.Net.HttpStatusCode.OK)
+            {
+                if (responseContent != "[]")
+                {
+                    JArray array = JArray.Parse(responseContent);
+                    if (array.Count > 1)
+                    {
+                        faces = array.Count;
+                        return;
+                    }
+                    else
+                    {
+                        JObject joResponse = JObject.Parse(array[0].ToString());
+                        newfaceID = joResponse["faceId"].ToString(); //计算比较用
+                        useimages = imageFilePath;
+                    }
+
+                }
+              
+            }
 
         }
 
 
 
 
-        public async void VerifyRequest(string imageFilePath, string faceID, string newfaceID)
+        public async void VerifyRequest(string newfaceid, string FaceListId)
         {
-            try
+
+
+            count = count + 1;
+            var client = new HttpClient();
+            string queryString = string.Format("faceId={0}&faceListId={1}&maxNumOfCandidatesReturned={2}&mode={3}",
+                newfaceid, FaceListId,
+                20,
+                "matchFace");
+            // Request headers
+            client.DefaultRequestHeaders.Add("Ocp-Apim-Subscription-Key", "575223f6ffda4f03b73dc9c8a5cc4a29");
+            var uri = string.Format("https://southeastasia.api.cognitive.microsoft.com/face/v1.0/findsimilars?") + queryString;
+            HttpResponseMessage response;
+            string responseContent;
+            // Request body
+
+            //string value = "{\"faceId\":\"" + newfaceid + "\",\"faceListId\":\"" + FaceListId + "\",\"maxNumOfCandidatesReturned\":\"20\",\"mode\":\"matchFace\"}";
+            string value = "{\"faceId\":\""+ newfaceid + "\",\"faceListId\":\""+ FaceListId + "\",\"maxNumOfCandidatesReturned\":\"20\",\"mode\":\"matchFace\"}";
+
+            byte[] byteData = Encoding.UTF8.GetBytes(value);
+
+            using (var content = new ByteArrayContent(byteData))
             {
+                content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
+                response = await client.PostAsync(uri, content);
+                responseContent = response.Content.ReadAsStringAsync().Result;
+            }
 
-                var client = new HttpClient();
-               
-                /**亚洲版本**/
-                client.DefaultRequestHeaders.Add("Ocp-Apim-Subscription-Key", "575223f6ffda4f03b73dc9c8a5cc4a29");
-                string queryString = string.Format("faceId1={0}&faceId2={1}", faceID, newfaceID);
-                string uri = "https://southeastasia.api.cognitive.microsoft.com/face/v1.0/verify?" + queryString;
-                // old ?
-
-                /**美国版本**/
-                /**
-                client.DefaultRequestHeaders.Add("Ocp-Apim-Subscription-Key", "24772065efe543a7894d907a494c6a18");
-                string queryString = string.Format("faceId1={0}&faceId2={1}", faceID, newfaceID);
-                string uri = "https://westus.api.cognitive.microsoft.com/face/v1.0/verify?" + queryString;
-                **/
+            if (response.StatusCode == System.Net.HttpStatusCode.OK)
+            {
+                responseContent = responseContent.Replace("[", "").Replace("]", "");
+                JObject joResponse = JObject.Parse(responseContent);
 
 
-                HttpResponseMessage response;
-                string responseContent;
-
-                
-                // Request body
-                byte[] byteData = Encoding.UTF8.GetBytes("{\"faceId1\":\""+ faceID + "\",\"faceId2\":\""+ newfaceID + "\"}");
-
-                using (var content = new ByteArrayContent(byteData))
+                FileInfo fi = new FileInfo(useimages);
+                if (fi.Exists)
                 {
-                    content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
-                    response = await client.PostAsync(uri, content);
-                    responseContent = response.Content.ReadAsStringAsync().Result;
+                    if (!Directory.Exists(UserPay + "\\FacePayImages\\"))//如果不存在就创建file文件夹　　             　　                
+                        Directory.CreateDirectory(UserPay + "\\FacePayImages\\");//创建该文件夹　
+                    fi.MoveTo(UserPay + "\\FacePayImages\\" + newfaceid.ToString() + ".jpg");
                 }
 
-                //A peak at the JSON response.
-                if (responseContent == "[]")
+
+                string isIdentical;
+                if (double.Parse(joResponse["confidence"].ToString()) < double.Parse("0.5"))
                 {
-
-                    // 此位置识别不到您
-                    try
-                    {
-                        errorlog = errorlog + Environment.NewLine + string.Format("刷脸支付：暂时不支持刷年支付，请联系管理员!", imageFilePath);
-                    }
-                    catch (Exception ex)
-                    {
-                        //string filename = UserPay + string.Format("{0}.txt", System.DateTime.Now.ToString("yyyyMMdd"));
-                        //Log log = new Log(filename);
-                        //log.log(ex.Message.ToString());
-                        //  throw;
-                    }
-
-
+                    isIdentical = "False";
                 }
                 else
                 {
-                    try
-                    {
-                        string isIdentical="", confidence = "";
-                        JObject joResponse = JObject.Parse(responseContent);
-
-                        if (joResponse["error"] is null)
-                        {
-                            isIdentical = joResponse["isIdentical"].ToString();
-                            confidence = joResponse["confidence"].ToString();
-
-                            if (isIdentical.ToUpper() == "TRUE")
-                            {
-
-                                successlog = successlog + Environment.NewLine + phonenumber;
-                                successlog = successlog + Environment.NewLine + "FacePayImages:" + newfaceID + ".jpg";
-                                successlog = successlog + Environment.NewLine + "isIdentical:" + isIdentical;
-                                successlog = successlog + Environment.NewLine + "confidence:" + confidence;
-                            }
-                            else
-                            {
-                                errorlog = errorlog + Environment.NewLine + phonenumber;
-                                errorlog = errorlog + Environment.NewLine + "FacePayImages:" + newfaceID + ".jpg";
-                                errorlog = errorlog + Environment.NewLine + "isIdentical:" + isIdentical;
-                                errorlog = errorlog + Environment.NewLine + "confidence:" + confidence;
-                            }
-                        }
-                        else
-                        {
-                            // 排除限制支付
-                            if (joResponse["error"]["code"].ToString() != "RateLimitExceeded")
-                            {
-                                errorlog3 = errorlog3 + Environment.NewLine + joResponse["error"]["code"].ToString();
-                                errorlog3 = errorlog3 + Environment.NewLine + joResponse["error"]["message"].ToString();
-                            }
-                        }
-                        
-                     
-
-                    }
-                    catch (Exception ex)
-                    {
-                        System.Threading.Thread.Sleep(5000);  // Rate limit is exceeded. Try again later.
-                        //string filename = UserPay+ string.Format("{0}.txt", System.DateTime.Now.ToString("yyyyMMdd") );
-                        //Log log = new Log(filename);
-                        //log.log(ex.Message.ToString());
-
-                    }
+                    isIdentical = "True";
 
 
                 }
+                successlog = "";
+                successlog = successlog + Environment.NewLine + phonenumber;
+                successlog = successlog + Environment.NewLine + "isIdentical:" + isIdentical;
+                successlog = successlog + Environment.NewLine + "FacePayImages:" + newfaceid + ".jpg";
+                successlog = successlog + Environment.NewLine + "persistedFaceId:" + joResponse["persistedFaceId"].ToString();
+                successlog = successlog + Environment.NewLine + "confidence:" + joResponse["confidence"].ToString();
+            }
 
-            }
-            catch (Exception ex)
-            {
-                count = count + 1;
-                System.Threading.Thread.Sleep(5000);
-            }
 
 
         }

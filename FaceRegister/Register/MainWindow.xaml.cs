@@ -29,6 +29,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Windows.Interop;
+using System.Text;
 
 namespace FaceID
 {
@@ -56,9 +57,8 @@ namespace FaceID
         private int faceRectangleX;
         private int faceRectangleY;
 
-        string errorlog="", successlog = "";
-        int flat = 0;
-        int count = 0;
+        string successlog = "";
+        public static int count = 0;
         private const int GWL_STYLE = -16;
         private const int WS_SYSMENU = 0x80000;
         [DllImport("user32.dll", SetLastError = true)]
@@ -66,6 +66,7 @@ namespace FaceID
         [DllImport("user32.dll")]
         private static extern int SetWindowLong(IntPtr hWnd, int nIndex, int dwNewLong);
 
+        public static string faceListId = "", persistedFaceId = "";
         public  MainWindow()
         {
 
@@ -101,12 +102,40 @@ namespace FaceID
             // Start SenseManage and configure the face module
             ConfigureRealSense();
 
-
+            // Create a Face List
+            CreateFaceList();
             // Start the worker thread
             processingThread = new Thread(new ThreadStart(ProcessingThread));
             processingThread.Start();
 
         }
+
+    
+        static async void CreateFaceList()
+        {
+            count = count + 1;
+            var client = new HttpClient();
+            string queryString = string.Format("name={0}&userData={1}", "sample_list", "User-provided data attached to the face list");
+            // Request headers
+            client.DefaultRequestHeaders.Add("Ocp-Apim-Subscription-Key", "575223f6ffda4f03b73dc9c8a5cc4a29");
+            string FaceListId = System.Guid.NewGuid().ToString();
+            var uri = string.Format("https://southeastasia.api.cognitive.microsoft.com/face/v1.0/facelists/{0}?", FaceListId) + queryString;
+            HttpResponseMessage response;
+            // Request body
+            byte[] byteData = Encoding.UTF8.GetBytes("{\"name\":\" sample_list \",\"userData\":\"User-provided data attached to the face list\"}");
+
+            using (var content = new ByteArrayContent(byteData))
+            {
+                content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
+                response = await client.PutAsync(uri, content);
+            }
+            if (response.StatusCode == System.Net.HttpStatusCode.OK)
+            {
+                faceListId = FaceListId; //创建成功一定返回facelistID
+            }
+        }
+
+
         protected override void OnClosing(System.ComponentModel.CancelEventArgs e)
         {
             e.Cancel = true;
@@ -172,30 +201,20 @@ namespace FaceID
             while (senseManager.AcquireFrame(true) >= pxcmStatus.PXCM_STATUS_NO_ERROR)
             {
                 //写日志信息；
-                string errorfilename = UserRegister + "\\" + string.Format("{0}.txt", 0);
                 string successfilename = UserRegister + "\\" + string.Format("{0}.txt", 1);
                 string networkfilename = UserRegister + "\\" + string.Format("{0}.txt", 4);
-                if (count > 15)
+                if (count > 200)
                 {
                     Log log = new Log(networkfilename);
                     log.log("网络异常请重试"+ count.ToString());
                     Environment.Exit(0);
                     return;
-
                 }
-                if (errorlog != "" & flat==1)
-                {
-                    Log log = new Log(errorfilename);
-                    log.log(errorlog);
-                    
-                    Environment.Exit(0);
-                    return;
-                }
-                if (successlog != "" & flat == 1)
+               
+                if (successlog != "" )
                 {
                     Log log = new Log(successfilename);
                     log.log(successlog);
-                   
                     Environment.Exit(0);
                     return;
                 }
@@ -249,10 +268,23 @@ namespace FaceID
                                 colorBitmap.Save(filefullname, System.Drawing.Imaging.ImageFormat.Jpeg);
                             }
 
+                            //if (faces > 1)
+                            //{
+                            //    string filename = UserRegister + string.Format("{0}.txt", 2);
+                            //    Log log = new Log(filename);
+                            //    log.log(string.Format("检测摄像头前有人数:" + faces + "人，不支持人脸支付！"));
+                            //    Environment.Exit(0);
+                            //    return;
+                            //}
+
+
                             lock (this)
                             {
-                                ProcessIMAGES(filefullname);
-
+                                if (faceListId != "")
+                                {
+                                    ProcessIMAGES(faceListId,filefullname);
+                                }
+                               
                             }
                         }
                     }
@@ -294,125 +326,61 @@ namespace FaceID
         }
 
 
-        async void ProcessIMAGES(string imageFilePath)
+        async void ProcessIMAGES(string faceListId,string imageFilePath)
         {
-            flat = 1;
-            try
+            count = count + 1;
+            var client = new HttpClient();
+            // Request headers
+            client.DefaultRequestHeaders.Add("Ocp-Apim-Subscription-Key", "575223f6ffda4f03b73dc9c8a5cc4a29");
+            string queryString = "";// string.Format("userData={0}&targetFace={1}", "sample_list2", "2222222");
+         
+            var uri = string.Format("https://southeastasia.api.cognitive.microsoft.com/face/v1.0/facelists/{0}/persistedFaces?", faceListId) + queryString;
+            HttpResponseMessage response;
+            string responseContent;
+            // Request body
+            byte[] byteData = GetImageAsByteArray(imageFilePath);
+            using (var content = new ByteArrayContent(byteData))
             {
-                var client = new HttpClient();
-
-                /**亚洲版本**/
-                client.DefaultRequestHeaders.Add("Ocp-Apim-Subscription-Key", "575223f6ffda4f03b73dc9c8a5cc4a29");
-                string queryString = "returnFaceId=true&returnFaceLandmarks=false&returnFaceAttributes=age,gender,smile,glasses,emotion";
-                string uri = "https://southeastasia.api.cognitive.microsoft.com/face/v1.0/detect?" + queryString;
-
-                /**美国版本**/
-                /**
-                  client.DefaultRequestHeaders.Add("Ocp-Apim-Subscription-Key", "24772065efe543a7894d907a494c6a18");
-                  string queryString = "returnFaceId=true&returnFaceLandmarks=false&returnFaceAttributes=age,gender,smile,glasses,emotion";
-                  string uri = "https://westus.api.cognitive.microsoft.com/face/v1.0/detect?" + queryString;
-                **/
-
-
-                HttpResponseMessage response;
-                string responseContent;
-
-                // Request body. Try this sample with a locally stored JPEG image.
-                byte[] byteData = GetImageAsByteArray(imageFilePath);
-
-                using (var content = new ByteArrayContent(byteData))
-                {
-                    // This example uses content type "application/octet-stream".
-                    // The other content types you can use are "application/json" and "multipart/form-data".
-                    content.Headers.ContentType = new MediaTypeHeaderValue("application/octet-stream");
-                    response = await client.PostAsync(uri, content);
-                    responseContent = response.Content.ReadAsStringAsync().Result;
-                }
-
-                //A peak at the JSON response.
-                //Console.WriteLine(responseContent);
-
-                if (responseContent == "[]")
-                {
-
-
-                }
-                else
-                {
-                    try
-                    {
-                        JArray array = JArray.Parse(responseContent);
-                        JObject joResponse = JObject.Parse(array[0].ToString());
-                        JObject ojObject = (JObject)joResponse["faceAttributes"];
-
-                        string ouid = joResponse["faceId"].ToString();
-
-                        if (array.Count > 1)
-                        {
-                            errorlog = errorlog+ Environment.NewLine+ string.Format("检测摄像头前有人数:" + array.Count + "人，不支持人脸注册！");
-                          
-                        }
-
-                        // ojObject is null 限制调用
-                       if (ojObject == null)
-                        {
-
-                        }
-                        else
-                        {
-                            string gender = ojObject["gender"].ToString();
-                            string age = ojObject["age"].ToString();
-                            string smile = ojObject["smile"].ToString();
-                            string glasses = ojObject["glasses"].ToString();
-                            JObject emotion = (JObject)ojObject["emotion"];
-
-                            string faceresult = string.Format("性别:{0}\n年龄:{1}\n微笑:{2}\n眼镜:{3}\n愤怒:{4}\n鄙视:{5}\n厌恶:{6}\n恐惧:{7}\n幸福:{8}\n伤心:{9}\n惊喜:{10}",
-                               gender, age, smile, glasses,
-                               emotion["anger"].ToString(), emotion["contempt"].ToString(),
-                               emotion["disgust"].ToString(), emotion["fear"].ToString(), emotion["happiness"].ToString(),
-                               emotion["sadness"].ToString(), emotion["surprise"].ToString()
-                               );
-
-                            // 更新文件名
-                            FileInfo fi = new FileInfo(imageFilePath);
-                            if (fi.Exists)
-                            {
-
-                                if (!Directory.Exists(UserRegister + "\\RegisterUser\\"))//如果不存在就创建file文件夹　　             　　                
-                                    Directory.CreateDirectory(UserRegister + "\\RegisterUser\\");//创建该文件夹　
-
-                                fi.MoveTo(UserRegister + "\\RegisterUser\\" + ouid.ToString() + ".jpg");
-
-                                successlog = successlog + UserRegister + "\\RegisterUser\\" + ouid.ToString() + ".jpg";
-                                successlog = successlog + Environment.NewLine + faceresult;
-                              
-                            }
-                         
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                       
-
-                       // System.Threading.Thread.Sleep(5000);  // Rate limit is exceeded. Try again later.
-                        //string filename = UserRegister + string.Format("{0}.txt", System.DateTime.Now.ToString("yyyyMMdd"));
-                        //Log log = new Log(filename);
-                        //log.log(responseContent.ToString());
-                        //log.log(ex.Message.ToString());
-                    }
-
-
-                }
-
-            }
-            catch (Exception ex)
-            {
-                // 网络原因，不能连接接口
-                count = count + 1;
-                System.Threading.Thread.Sleep(5000);
+                content.Headers.ContentType = new MediaTypeHeaderValue("application/octet-stream");
+                response = await client.PostAsync(uri, content);
+                responseContent = response.Content.ReadAsStringAsync().Result;
             }
 
+            if (response.StatusCode == System.Net.HttpStatusCode.OK)
+            {
+
+                //JArray array = JArray.Parse(responseContent);
+                //if (array.Count > 1)
+                //{
+                //    faces = array.Count;
+                //    return;
+                //}
+                //else
+                //{
+                    JObject joResponse = JObject.Parse(responseContent);
+                    persistedFaceId = joResponse["persistedFaceId"].ToString();
+
+                    // 更新文件名
+                    FileInfo fi = new FileInfo(imageFilePath);
+                    if (fi.Exists)
+                    {
+
+                        if (!Directory.Exists(UserRegister + "\\RegisterUser\\"))//如果不存在就创建file文件夹　　             　　                
+                            Directory.CreateDirectory(UserRegister + "\\RegisterUser\\");//创建该文件夹　
+
+                        fi.MoveTo(UserRegister + "\\RegisterUser\\" + persistedFaceId.ToString() + ".jpg");
+
+                        successlog = successlog + Environment.NewLine + "faceListId:" + faceListId;
+                        successlog = successlog + Environment.NewLine + "persistedFaceId:" + persistedFaceId.ToString();
+                        successlog = successlog + Environment.NewLine + "UserRegisterImages:" + UserRegister + "\\RegisterUser\\" + persistedFaceId.ToString() + ".jpg";
+
+                    }
+
+              //  }
+                   
+            }
            
+
         }
 
 
