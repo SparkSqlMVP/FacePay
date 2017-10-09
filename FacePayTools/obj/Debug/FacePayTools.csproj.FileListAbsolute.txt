@@ -1,0 +1,8 @@
+C:\Clients\3 coodell\AIProject\AI\FacePay\FacePayTools\bin\Debug\FacePayTools.exe.config
+C:\Clients\3 coodell\AIProject\AI\FacePay\FacePayTools\bin\Debug\FacePayTools.exe
+C:\Clients\3 coodell\AIProject\AI\FacePay\FacePayTools\bin\Debug\FacePayTools.pdb
+C:\Clients\3 coodell\AIProject\AI\FacePay\FacePayTools\bin\Debug\Newtonsoft.Json.dll
+C:\Clients\3 coodell\AIProject\AI\FacePay\FacePayTools\bin\Debug\Newtonsoft.Json.xml
+C:\Clients\3 coodell\AIProject\AI\FacePay\FacePayTools\obj\Debug\FacePayTools.exe
+C:\Clients\3 coodell\AIProject\AI\FacePay\FacePayTools\obj\Debug\FacePayTools.pdb
+C:\Clients\3 coodell\AIProject\AI\FacePay\FacePayTools\obj\Debug\FacePayTools.csprojResolveAssemblyReference.cache

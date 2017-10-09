@@ -57,7 +57,7 @@ namespace FaceID
         private int faceRectangleX;
         private int faceRectangleY;
 
-        string successlog = "";
+        public  static string successlog = "", errorlog = "";
         public static int count = 0;
         private const int GWL_STYLE = -16;
         private const int WS_SYSMENU = 0x80000;
@@ -66,24 +66,22 @@ namespace FaceID
         [DllImport("user32.dll")]
         private static extern int SetWindowLong(IntPtr hWnd, int nIndex, int dwNewLong);
 
-        public static string faceListId = "", persistedFaceId = "";
+        public static string personGroupID = "", personId = "", persistedFaceId="";
         public  MainWindow()
         {
-
+           
             InitializeComponent();
             rectFaceMarker.Visibility = Visibility.Hidden;
            
             numFacesDetected = 0;
             userId = string.Empty;
             dbState = string.Empty;
-          
 
             if (!Directory.Exists(UserRegister))
             {
                 // 清空文件夹
                 Directory.CreateDirectory(UserRegister);
             }
-
 
             // 第一次启动时候删除所有日志信息
               string pattern = "*.txt";
@@ -92,7 +90,6 @@ namespace FaceID
               {
                  File.Delete(item);
               }
-
             if (Directory.Exists(UserRegister + "\\Images\\"))
             {
                 // 删除图片文件
@@ -101,39 +98,92 @@ namespace FaceID
              
             // Start SenseManage and configure the face module
             ConfigureRealSense();
-
-            // Create a Face List
-            CreateFaceList();
+            CreateGroupID();
             // Start the worker thread
             processingThread = new Thread(new ThreadStart(ProcessingThread));
             processingThread.Start();
 
         }
 
-    
-        static async void CreateFaceList()
+        //Person Group - Create a Person Group
+        static async void CreateGroupID()
         {
             count = count + 1;
-            var client = new HttpClient();
-            string queryString = string.Format("name={0}&userData={1}", "sample_list", "User-provided data attached to the face list");
-            // Request headers
-            client.DefaultRequestHeaders.Add("Ocp-Apim-Subscription-Key", "575223f6ffda4f03b73dc9c8a5cc4a29");
-            string FaceListId = System.Guid.NewGuid().ToString();
-            var uri = string.Format("https://southeastasia.api.cognitive.microsoft.com/face/v1.0/facelists/{0}?", FaceListId) + queryString;
-            HttpResponseMessage response;
-            // Request body
-            byte[] byteData = Encoding.UTF8.GetBytes("{\"name\":\" sample_list \",\"userData\":\"User-provided data attached to the face list\"}");
+            try
+            {
+                var client = new HttpClient();
+                client.DefaultRequestHeaders.Add("Ocp-Apim-Subscription-Key", "575223f6ffda4f03b73dc9c8a5cc4a29");
+                string groupID = System.Guid.NewGuid().ToString();
 
-            using (var content = new ByteArrayContent(byteData))
-            {
+                string uri = "https://southeastasia.api.cognitive.microsoft.com/face/v1.0/persongroups/" + groupID;
+
+                string json = "{\"name\":\"group1\", \"userData\":\"user-provided data attached to the person group\"}";
+                HttpContent content = new StringContent(json);
                 content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
-                response = await client.PutAsync(uri, content);
+                HttpResponseMessage response = await client.PutAsync(uri, content);
+
+                if (response.StatusCode == System.Net.HttpStatusCode.OK)
+                {
+                    personGroupID = groupID; //创建成功一定返回personGroupID
+                    CreatePersonID(personGroupID);
+                }
+                
             }
-            if (response.StatusCode == System.Net.HttpStatusCode.OK)
+            catch (Exception ex)
             {
-                faceListId = FaceListId; //创建成功一定返回facelistID
+                string path= System.Configuration.ConfigurationManager.AppSettings["UserRegister"];
+                string filename = path + string.Format("{0}.txt", System.DateTime.Now.ToString("yyyyMMdd"));
+                Log log = new Log(filename);
+                log.log(Environment.NewLine + "生成personGroupID失败!");
+                log.log(Environment.NewLine + ex.Message);
+                Environment.Exit(0);
             }
         }
+
+        // Person - Create a Person
+        static async void CreatePersonID(string persongroupid)
+        {
+            count = count + 1;
+            try
+            {
+                string responseContent;
+                var client = new HttpClient();
+                client.DefaultRequestHeaders.Add("Ocp-Apim-Subscription-Key", "575223f6ffda4f03b73dc9c8a5cc4a29");
+             
+                string uri = string.Format(
+                    "https://southeastasia.api.cognitive.microsoft.com/face/v1.0/persongroups/{0}/persons", persongroupid);
+
+                string json = "{\"name\":\"Person1\", \"userData\":\"User-provided data attached to the person\"}";
+
+                byte[] byteData = Encoding.UTF8.GetBytes(json);
+
+                using (var content = new ByteArrayContent(byteData))
+                {
+                    content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
+                    HttpResponseMessage  response = await client.PostAsync(uri, content);
+
+                    responseContent = response.Content.ReadAsStringAsync().Result;
+                    if (response.StatusCode == System.Net.HttpStatusCode.OK)
+                    {
+                        JObject joResponse = JObject.Parse(responseContent);
+                        personId = joResponse["personId"].ToString(); //计算比较用
+                    }
+                }
+
+
+               
+            }
+            catch (Exception ex)
+            {
+                string path = System.Configuration.ConfigurationManager.AppSettings["UserRegister"];
+                string filename = path + string.Format("{0}.txt", System.DateTime.Now.ToString("yyyyMMdd"));
+                Log log = new Log(filename);
+                log.log(Environment.NewLine + "生成personId失败!");
+                log.log(Environment.NewLine + ex.Message);
+                Environment.Exit(0);
+            }
+        }
+
 
 
         protected override void OnClosing(System.ComponentModel.CancelEventArgs e)
@@ -142,6 +192,7 @@ namespace FaceID
         }
         private  void ConfigureRealSense()
         {
+
             PXCMFaceModule faceModule;
             PXCMFaceConfiguration faceConfig;
             
@@ -197,11 +248,14 @@ namespace FaceID
 
         private  void ProcessingThread()
         {
+
+           
             // Start AcquireFrame/ReleaseFrame loop
             while (senseManager.AcquireFrame(true) >= pxcmStatus.PXCM_STATUS_NO_ERROR)
             {
                 //写日志信息；
                 string successfilename = UserRegister + "\\" + string.Format("{0}.txt", 1);
+                string errorfilename = UserRegister + "\\" + string.Format("{0}.txt", 2);
                 string networkfilename = UserRegister + "\\" + string.Format("{0}.txt", 4);
                 if (count > 200)
                 {
@@ -219,6 +273,13 @@ namespace FaceID
                     return;
                 }
 
+                if (errorlog != "")
+                {
+                    Log log = new Log(errorfilename);
+                    log.log(errorlog);
+                    Environment.Exit(0);
+                    return;
+                }
 
                 // Acquire the color image data
                 PXCMCapture.Sample sample = senseManager.QuerySample();
@@ -274,17 +335,19 @@ namespace FaceID
                             //    Log log = new Log(filename);
                             //    log.log(string.Format("检测摄像头前有人数:" + faces + "人，不支持人脸支付！"));
                             //    Environment.Exit(0);
-                            //    return;
+                            //    return; personGroupID = "", personId = "";
                             //}
 
 
                             lock (this)
                             {
-                                if (faceListId != "")
+                                if (personGroupID != "" && personId !="")
                                 {
-                                    ProcessIMAGES(faceListId,filefullname);
+                                    ProcessIMAGES(personGroupID, personId,filefullname);
                                 }
                                
+
+                                count = count + 1;
                             }
                         }
                     }
@@ -326,37 +389,41 @@ namespace FaceID
         }
 
 
-        async void ProcessIMAGES(string faceListId,string imageFilePath)
+        async void ProcessIMAGES(string personGroupID, string personId, string imageFilePath)
         {
             count = count + 1;
-            var client = new HttpClient();
-            // Request headers
-            client.DefaultRequestHeaders.Add("Ocp-Apim-Subscription-Key", "575223f6ffda4f03b73dc9c8a5cc4a29");
-            string queryString = "";// string.Format("userData={0}&targetFace={1}", "sample_list2", "2222222");
-         
-            var uri = string.Format("https://southeastasia.api.cognitive.microsoft.com/face/v1.0/facelists/{0}/persistedFaces?", faceListId) + queryString;
-            HttpResponseMessage response;
-            string responseContent;
-            // Request body
-            byte[] byteData = GetImageAsByteArray(imageFilePath);
-            using (var content = new ByteArrayContent(byteData))
-            {
-                content.Headers.ContentType = new MediaTypeHeaderValue("application/octet-stream");
-                response = await client.PostAsync(uri, content);
-                responseContent = response.Content.ReadAsStringAsync().Result;
-            }
 
-            if (response.StatusCode == System.Net.HttpStatusCode.OK)
+            try
             {
+                var client = new HttpClient();
+                // Request headers
+                client.DefaultRequestHeaders.Add("Ocp-Apim-Subscription-Key", "575223f6ffda4f03b73dc9c8a5cc4a29");
+             
+                var uri = string.Format(
+                    "https://southeastasia.api.cognitive.microsoft.com/face/v1.0/persongroups/{0}/persons/{1}/persistedFaces",
+                    personGroupID, personId);
+                HttpResponseMessage response;
+                string responseContent;
+                // Request body
+                byte[] byteData = GetImageAsByteArray(imageFilePath);
+                using (var content = new ByteArrayContent(byteData))
+                {
+                    content.Headers.ContentType = new MediaTypeHeaderValue("application/octet-stream");
+                    response = await client.PostAsync(uri, content);
+                    responseContent = response.Content.ReadAsStringAsync().Result;
+                }
 
-                //JArray array = JArray.Parse(responseContent);
-                //if (array.Count > 1)
-                //{
-                //    faces = array.Count;
-                //    return;
-                //}
-                //else
-                //{
+                if (response.StatusCode == System.Net.HttpStatusCode.OK)
+                {
+
+                    //JArray array = JArray.Parse(responseContent);
+                    //if (array.Count > 1)
+                    //{
+                    //    faces = array.Count;
+                    //    return;
+                    //}
+                    //else
+                    //{
                     JObject joResponse = JObject.Parse(responseContent);
                     persistedFaceId = joResponse["persistedFaceId"].ToString();
 
@@ -367,18 +434,27 @@ namespace FaceID
 
                         if (!Directory.Exists(UserRegister + "\\RegisterUser\\"))//如果不存在就创建file文件夹　　             　　                
                             Directory.CreateDirectory(UserRegister + "\\RegisterUser\\");//创建该文件夹　
-
                         fi.MoveTo(UserRegister + "\\RegisterUser\\" + persistedFaceId.ToString() + ".jpg");
 
-                        successlog = successlog + Environment.NewLine + "faceListId:" + faceListId;
+                        successlog = successlog + Environment.NewLine + "PersonGroupID:" + personGroupID.ToString();
+                        successlog = successlog + Environment.NewLine + "personId:" + personId.ToString();
                         successlog = successlog + Environment.NewLine + "persistedFaceId:" + persistedFaceId.ToString();
                         successlog = successlog + Environment.NewLine + "UserRegisterImages:" + UserRegister + "\\RegisterUser\\" + persistedFaceId.ToString() + ".jpg";
 
                     }
 
-              //  }
-                   
+
+                }
+               
             }
+            catch (Exception ex)
+            {
+                Thread.Sleep(3000);
+                errorlog = errorlog + Environment.NewLine + "生成 persistedFaceId 失败!";
+                errorlog = errorlog + Environment.NewLine + ex.Message;
+                return;
+            }
+
            
 
         }
@@ -504,6 +580,12 @@ namespace FaceID
         {
             DeleteDatabaseFile();
         }
+
+        private void Window_Loaded(object sender, RoutedEventArgs e)
+        {
+            this.Left = -1920;
+        }
+
         private void btnExit_Click(object sender, RoutedEventArgs e)
         {
             ReleaseResources();
@@ -511,22 +593,6 @@ namespace FaceID
             
         }
 
-        private void Label_Loaded(object sender, RoutedEventArgs e)
-        {
-
-            var hwnd = new WindowInteropHelper(this).Handle;
-            SetWindowLong(hwnd, GWL_STYLE, GetWindowLong(hwnd, GWL_STYLE) & ~WS_SYSMENU);
-
-            // 设置全屏  
-            this.WindowState = System.Windows.WindowState.Normal;
-            this.WindowStyle = System.Windows.WindowStyle.None;
-            this.ResizeMode = System.Windows.ResizeMode.NoResize;
-       
-            this.Left = 0.0;
-            this.Top = 0.0;
-            this.Width = System.Windows.SystemParameters.PrimaryScreenWidth;
-            this.Height = System.Windows.SystemParameters.PrimaryScreenHeight;
-        }
 
 
         private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)

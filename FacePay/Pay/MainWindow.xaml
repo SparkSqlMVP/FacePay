@@ -3,8 +3,9 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Coodell AI Technology"
         WindowStartupLocation="CenterScreen"
-        Closing="Window_Closing" Height="640" Background="#FF293955" Width="960"  ResizeMode="NoResize"
-        Loaded="Window_Loaded"  >
+        Closing="Window_Closing" Height="1080"
+        Background="#FF293955" Width="1920"  ResizeMode="NoResize"
+        Loaded="Window_Loaded"  Topmost="True" >
 
     <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
         <Label Content="人脸支付" FontSize="32" Foreground="White" Margin="5"/>
