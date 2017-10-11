@@ -60,7 +60,7 @@ namespace FaceID
         private int faceRectangleY;
         public string PersonGroupID, personId, phonenumber, newfaceID="", filefullname = "";
 
-        string useimages="",successlog = "", errorlog="";
+        string  successlog = "", errorlog = "", faillog = "";
         int faces = 0, count = 0;
 
         private const int GWL_STYLE = -16;
@@ -86,9 +86,19 @@ namespace FaceID
                 }
                 else
                 {
-                    string filename = UserPay  + string.Format("{0}.txt", 0);
+                    string filename = UserPay + string.Format("{0}.txt", 0);
+                    errorlog = errorlog + Environment.NewLine + phonenumber;
+                    errorlog = errorlog + Environment.NewLine + "isIdentical:";
+                    errorlog = errorlog + Environment.NewLine + "confidence:";
+                    errorlog = errorlog + Environment.NewLine + "FacePayImages:" + filefullname;
+                    errorlog = errorlog + Environment.NewLine + "PersonGroupID:" + PersonGroupID;
+                    errorlog = errorlog + Environment.NewLine + "personId:" + personId;
+                    errorlog = errorlog + Environment.NewLine + "Msg: 数据不完整，启动摄像头失败!";
                     Log log = new Log(filename);
-                    log.log("数据不完整，启动摄像头失败!");
+                    log.log(errorlog);
+                    Environment.Exit(0);
+
+
                     Environment.Exit(0);
                 }
              
@@ -96,9 +106,17 @@ namespace FaceID
             else
             {
                 string filename = UserPay + string.Format("{0}.txt", 0);
+                errorlog = errorlog + Environment.NewLine + phonenumber;
+                errorlog = errorlog + Environment.NewLine + "isIdentical:";
+                errorlog = errorlog + Environment.NewLine + "confidence:";
+                errorlog = errorlog + Environment.NewLine + "FacePayImages:" + filefullname;
+                errorlog = errorlog + Environment.NewLine + "PersonGroupID:" + PersonGroupID;
+                errorlog = errorlog + Environment.NewLine + "personId:" + personId;
+                errorlog = errorlog + Environment.NewLine + "Msg: "+ UserPay + PhoneFilename + "文件不存在,启动摄像头失败";
                 Log log = new Log(filename);
-                log.log(UserPay + PhoneFilename + "文件不存在,启动摄像头失败");
+                log.log(errorlog);
                 Environment.Exit(0);
+
             }
 
             rectFaceMarker.Visibility = Visibility.Hidden;
@@ -183,9 +201,16 @@ namespace FaceID
             }
             catch (Exception ex)
             {
-                string filename = UserPay+ string.Format("{0}.txt", System.DateTime.Now.ToString("yyyyMMdd"));
+                string filename = UserPay+ string.Format("{0}.txt", 2);
+                errorlog = errorlog + Environment.NewLine + phonenumber;
+                errorlog = errorlog + Environment.NewLine + "isIdentical:";
+                errorlog = errorlog + Environment.NewLine + "confidence:";
+                errorlog = errorlog + Environment.NewLine + "FacePayImages:" + filefullname;
+                errorlog = errorlog + Environment.NewLine + "PersonGroupID:" + PersonGroupID;
+                errorlog = errorlog + Environment.NewLine + "personId:" + personId;
+                errorlog = errorlog + Environment.NewLine + "Msg: " + ex.Message;
                 Log log = new Log(filename);
-                log.log(ex.Message);
+                log.log(errorlog);
                 Environment.Exit(0);
             }
           
@@ -209,14 +234,22 @@ namespace FaceID
                     VerifyRequest(newfaceID, PersonGroupID, personId);
 
                     //写日志信息；
+                    string failfilename = UserPay + "\\" + string.Format("{0}.txt", 0);
                     string successfilename = UserPay + "\\" + string.Format("{0}.txt", 1);
                     string errorfilename = UserPay + "\\" + string.Format("{0}.txt", 2);
                     string networkfilename = UserPay + "\\" + string.Format("{0}.txt", 4);
 
                     if (count > 200)
                     {
+                        errorlog = errorlog + Environment.NewLine + phonenumber;
+                        errorlog = errorlog + Environment.NewLine + "isIdentical:";
+                        errorlog = errorlog + Environment.NewLine + "confidence:";
+                        errorlog = errorlog + Environment.NewLine + "FacePayImages:" + filefullname;
+                        errorlog = errorlog + Environment.NewLine + "PersonGroupID:" + PersonGroupID;
+                        errorlog = errorlog + Environment.NewLine + "personId:" + personId;
+                        errorlog = errorlog + Environment.NewLine + "Msg: " + "网络异常请重试" + count.ToString();
                         Log log = new Log(networkfilename);
-                        log.log("网络异常请重试" + count.ToString());
+                        log.log(errorlog);
                         Environment.Exit(0);
                         return;
                     }
@@ -225,6 +258,14 @@ namespace FaceID
                     {
                         Log log = new Log(successfilename);
                         log.log(successlog);
+                        Environment.Exit(0);
+                        return;
+                    }
+
+                    if (faillog != "")
+                    {
+                        Log log = new Log(failfilename);
+                        log.log(faillog);
                         Environment.Exit(0);
                         return;
                     }
@@ -290,10 +331,13 @@ namespace FaceID
 
                             if (faces > 1)
                             {
-                                string filename = UserPay + string.Format("{0}.txt", 2);
-                                Log log = new Log(filename);
-                                log.log(string.Format("检测摄像头前有人数 RealSense:" + faces + "人，不支持人脸支付！"));
-                                Environment.Exit(0);
+                                errorlog = errorlog + Environment.NewLine + phonenumber;
+                                errorlog = errorlog + Environment.NewLine + "isIdentical:";
+                                errorlog = errorlog + Environment.NewLine + "confidence:";
+                                errorlog = errorlog + Environment.NewLine + "FacePayImages:" + filefullname;
+                                errorlog = errorlog + Environment.NewLine + "PersonGroupID:" + PersonGroupID;
+                                errorlog = errorlog + Environment.NewLine + "personId:" + personId;
+                                errorlog = errorlog + Environment.NewLine + "Msg: " + string.Format("检测摄像头前有人数 RealSense:" + faces + "人，不支持人脸支付！");
                                 return;
                             }
 
@@ -387,7 +431,16 @@ namespace FaceID
                         {
                             JObject joResponse = JObject.Parse(array[0].ToString());
                             newfaceID = joResponse["faceId"].ToString(); //计算比较用
-                            useimages = imageFilePath;
+
+                            FileInfo fi = new FileInfo(imageFilePath);
+                            if (fi.Exists)
+                            {
+
+                                if (!Directory.Exists(UserPay + "\\PayUserImages\\"))//如果不存在就创建file文件夹　　             　　                
+                                    Directory.CreateDirectory(UserPay + "\\PayUserImages\\");//创建该文件夹　
+                                fi.MoveTo(UserPay + "\\PayUserImages\\" + newfaceID + ".jpg");
+                            }
+                               
                         }
 
                     }
@@ -397,8 +450,13 @@ namespace FaceID
             catch (Exception ex)
             {
                 Thread.Sleep(3000);
-                errorlog = errorlog + Environment.NewLine + "生成 persistedFaceId 失败!";
-                errorlog = errorlog + Environment.NewLine + ex.Message;
+                errorlog = errorlog + Environment.NewLine + phonenumber;
+                errorlog = errorlog + Environment.NewLine + "isIdentical:";
+                errorlog = errorlog + Environment.NewLine + "confidence:";
+                errorlog = errorlog + Environment.NewLine + "FacePayImages:" + imageFilePath;
+                errorlog = errorlog + Environment.NewLine + "PersonGroupID:" + PersonGroupID;
+                errorlog = errorlog + Environment.NewLine + "personId:" + personId;
+                errorlog = errorlog + Environment.NewLine + "Msg: 生成 persistedFaceId 失败! " + ex.Message;
                 throw;
             }
            
@@ -437,22 +495,30 @@ namespace FaceID
             if (response.StatusCode == System.Net.HttpStatusCode.OK)
             {
 
-                FileInfo fi = new FileInfo(useimages);
-                if (fi.Exists)
-                {
-
-                    if (!Directory.Exists(UserPay + "\\PayUserImages\\"))//如果不存在就创建file文件夹　　             　　                
-                        Directory.CreateDirectory(UserPay + "\\PayUserImages\\");//创建该文件夹　
-                    fi.MoveTo(UserPay + "\\PayUserImages\\" + newfaceID + ".jpg");
-
                     JObject joResponse = JObject.Parse(responseContent);
-                    successlog = successlog + Environment.NewLine + phonenumber;
-                    successlog = successlog + Environment.NewLine + "isIdentical:" + joResponse["isIdentical"].ToString();
-                    successlog = successlog + Environment.NewLine + "confidence:" + joResponse["confidence"].ToString();
-                    successlog = successlog + Environment.NewLine + "FacePayImages:" + newfaceID + ".jpg";
-                    successlog = successlog + Environment.NewLine + "PersonGroupID:" + PersonGroupID;
-                    successlog = successlog + Environment.NewLine + "personId:" + personId;
+
+                    if (joResponse["isIdentical"].ToString()=="False") {
+                        faillog = faillog + Environment.NewLine + phonenumber;
+                        faillog = faillog + Environment.NewLine + "isIdentical:" + joResponse["isIdentical"].ToString();
+                        faillog = faillog + Environment.NewLine + "confidence:" + joResponse["confidence"].ToString();
+                        faillog = faillog + Environment.NewLine + "FacePayImages: " + UserPay + "\\PayUserImages\\" + newfaceID + ".jpg";
+                        faillog = faillog + Environment.NewLine + "PersonGroupID:" + PersonGroupID;
+                        faillog = faillog + Environment.NewLine + "personId:" + personId;
+                        faillog = faillog + Environment.NewLine + "Msg:" + "识别失败!";
+                    }
+                    else
+                    {
+                        successlog = successlog + Environment.NewLine + phonenumber;
+                        successlog = successlog + Environment.NewLine + "isIdentical:" + joResponse["isIdentical"].ToString();
+                        successlog = successlog + Environment.NewLine + "confidence:" + joResponse["confidence"].ToString();
+                        successlog = successlog + Environment.NewLine + "FacePayImages:" + UserPay + "\\PayUserImages\\" + newfaceID + ".jpg";
+                        successlog = successlog + Environment.NewLine + "PersonGroupID:" + PersonGroupID;
+                        successlog = successlog + Environment.NewLine + "personId:" + personId;
+                        successlog = successlog + Environment.NewLine + "Msg:" + "识别失败!";
+
                 }
+                  
+               
               
 
             }
@@ -569,6 +635,7 @@ namespace FaceID
         private void Window_Loaded(object sender, RoutedEventArgs e)
         {
             this.Left = -1920;
+            this.Top = 0;
             //var hwnd = new WindowInteropHelper(this).Handle;
             //SetWindowLong(hwnd, GWL_STYLE, GetWindowLong(hwnd, GWL_STYLE) & ~WS_SYSMENU);
 

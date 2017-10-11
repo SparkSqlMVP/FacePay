@@ -132,11 +132,16 @@ namespace FaceID
             catch (Exception ex)
             {
                 string path= System.Configuration.ConfigurationManager.AppSettings["UserRegister"];
-                string filename = path + string.Format("{0}.txt", System.DateTime.Now.ToString("yyyyMMdd"));
+                string filename = path + string.Format("{0}.txt", 2);
                 Log log = new Log(filename);
-                log.log(Environment.NewLine + "生成personGroupID失败!");
-                log.log(Environment.NewLine + ex.Message);
+                errorlog = errorlog + Environment.NewLine + "PersonGroupID:" + personGroupID.ToString();
+                errorlog = errorlog + Environment.NewLine + "personId:" + personId.ToString();
+                errorlog = errorlog + Environment.NewLine + "persistedFaceId:" + persistedFaceId.ToString();
+                errorlog = errorlog + Environment.NewLine + "UserRegisterImages:" + path + "\\RegisterUser\\" + persistedFaceId.ToString() + ".jpg";
+                errorlog = errorlog + Environment.NewLine + "Msg: 生成personGroupID失败!" + ex.Message;
+                log.log(errorlog);
                 Environment.Exit(0);
+
             }
         }
 
@@ -176,10 +181,14 @@ namespace FaceID
             catch (Exception ex)
             {
                 string path = System.Configuration.ConfigurationManager.AppSettings["UserRegister"];
-                string filename = path + string.Format("{0}.txt", System.DateTime.Now.ToString("yyyyMMdd"));
+                string filename = path + string.Format("{0}.txt", 2);
                 Log log = new Log(filename);
-                log.log(Environment.NewLine + "生成personId失败!");
-                log.log(Environment.NewLine + ex.Message);
+                errorlog = errorlog + Environment.NewLine + "PersonGroupID:" + personGroupID.ToString();
+                errorlog = errorlog + Environment.NewLine + "personId:" + personId.ToString();
+                errorlog = errorlog + Environment.NewLine + "persistedFaceId:" + persistedFaceId.ToString();
+                errorlog = errorlog + Environment.NewLine + "UserRegisterImages:" + path + "\\RegisterUser\\" + persistedFaceId.ToString() + ".jpg";
+                errorlog = errorlog + Environment.NewLine + "Msg: 生成personId失败!" + ex.Message;
+                log.log(errorlog);
                 Environment.Exit(0);
             }
         }
@@ -235,9 +244,14 @@ namespace FaceID
             }
             catch (Exception ex)
             {
-                string filename = UserRegister  + string.Format("{0}.txt", System.DateTime.Now.ToString("yyyyMMdd"));
+                string filename = UserRegister  + string.Format("{0}.txt", 2);
                 Log log = new Log(filename);
-                log.log(ex.Message);
+                errorlog = errorlog + Environment.NewLine + "PersonGroupID:" + personGroupID.ToString();
+                errorlog = errorlog + Environment.NewLine + "personId:" + personId.ToString();
+                errorlog = errorlog + Environment.NewLine + "persistedFaceId:" + persistedFaceId.ToString();
+                errorlog = errorlog + Environment.NewLine + "UserRegisterImages:" + UserRegister + "\\RegisterUser\\" + persistedFaceId.ToString() + ".jpg";
+                errorlog = errorlog + Environment.NewLine + "Msg:" + ex.Message;
+                log.log(errorlog);
                 Environment.Exit(0);
             }
          
@@ -260,7 +274,12 @@ namespace FaceID
                 if (count > 200)
                 {
                     Log log = new Log(networkfilename);
-                    log.log("网络异常请重试"+ count.ToString());
+                    errorlog = errorlog + Environment.NewLine + "PersonGroupID:" + personGroupID.ToString();
+                    errorlog = errorlog + Environment.NewLine + "personId:" + personId.ToString();
+                    errorlog = errorlog + Environment.NewLine + "persistedFaceId:" + persistedFaceId.ToString();
+                    errorlog = errorlog + Environment.NewLine + "UserRegisterImages:" + UserRegister + "\\RegisterUser\\" + persistedFaceId.ToString() + ".jpg";
+                    errorlog = errorlog + Environment.NewLine + "Msg:" + "网络异常请重试" + count.ToString();
+                    log.log(errorlog);
                     Environment.Exit(0);
                     return;
                 }
@@ -345,8 +364,6 @@ namespace FaceID
                                 {
                                     ProcessIMAGES(personGroupID, personId,filefullname);
                                 }
-                               
-
                                 count = count + 1;
                             }
                         }
@@ -435,11 +452,11 @@ namespace FaceID
                         if (!Directory.Exists(UserRegister + "\\RegisterUser\\"))//如果不存在就创建file文件夹　　             　　                
                             Directory.CreateDirectory(UserRegister + "\\RegisterUser\\");//创建该文件夹　
                         fi.MoveTo(UserRegister + "\\RegisterUser\\" + persistedFaceId.ToString() + ".jpg");
-
                         successlog = successlog + Environment.NewLine + "PersonGroupID:" + personGroupID.ToString();
                         successlog = successlog + Environment.NewLine + "personId:" + personId.ToString();
                         successlog = successlog + Environment.NewLine + "persistedFaceId:" + persistedFaceId.ToString();
                         successlog = successlog + Environment.NewLine + "UserRegisterImages:" + UserRegister + "\\RegisterUser\\" + persistedFaceId.ToString() + ".jpg";
+                        successlog = successlog + Environment.NewLine + "Msg:" + "注册成功!";
 
                     }
 
@@ -450,8 +467,11 @@ namespace FaceID
             catch (Exception ex)
             {
                 Thread.Sleep(3000);
-                errorlog = errorlog + Environment.NewLine + "生成 persistedFaceId 失败!";
-                errorlog = errorlog + Environment.NewLine + ex.Message;
+                errorlog = errorlog + Environment.NewLine + "PersonGroupID:" + personGroupID.ToString();
+                errorlog = errorlog + Environment.NewLine + "personId:" + personId.ToString();
+                errorlog = errorlog + Environment.NewLine + "persistedFaceId:" + persistedFaceId.ToString();
+                errorlog = errorlog + Environment.NewLine + "UserRegisterImages:" + UserRegister + "\\RegisterUser\\" + persistedFaceId.ToString() + ".jpg";
+                errorlog = errorlog + Environment.NewLine + "Msg: 生成 persistedFaceId 失败!" + ex.Message;
                 return;
             }
 
@@ -584,6 +604,7 @@ namespace FaceID
         private void Window_Loaded(object sender, RoutedEventArgs e)
         {
             this.Left = -1920;
+            this.Top = 0;
         }
 
         private void btnExit_Click(object sender, RoutedEventArgs e)

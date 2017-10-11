@@ -4,7 +4,7 @@
         Title="Coodell AI Technology"
         WindowStartupLocation="CenterScreen"
         Closing="Window_Closing" Height="1080" Background="#FF293955" Width="1920" 
-        Loaded="Window_Loaded"  Topmost="True" 
+        Loaded="Window_Loaded"  Topmost="True"  AllowsTransparency="True" WindowStyle="None"
         >
 
     <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
