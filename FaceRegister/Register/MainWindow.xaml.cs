@@ -276,8 +276,8 @@ namespace FaceID
                     Log log = new Log(networkfilename);
                     errorlog = errorlog + Environment.NewLine + "PersonGroupID:" + personGroupID.ToString();
                     errorlog = errorlog + Environment.NewLine + "personId:" + personId.ToString();
-                    errorlog = errorlog + Environment.NewLine + "persistedFaceId:" + persistedFaceId.ToString();
-                    errorlog = errorlog + Environment.NewLine + "UserRegisterImages:" + UserRegister + "\\RegisterUser\\" + persistedFaceId.ToString() + ".jpg";
+                    errorlog = errorlog + Environment.NewLine + "persistedFaceId:" + persistedFaceId.ToString()=="" ? "-1": persistedFaceId.ToString();
+                    errorlog = errorlog + Environment.NewLine + "UserRegisterImages:" + UserRegister + "\\RegisterUser\\" + persistedFaceId.ToString() == "" ? "-1" : persistedFaceId.ToString() + ".jpg";
                     errorlog = errorlog + Environment.NewLine + "Msg:" + "网络异常请重试" + count.ToString();
                     log.log(errorlog);
                     Environment.Exit(0);

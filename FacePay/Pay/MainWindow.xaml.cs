@@ -97,9 +97,7 @@ namespace FaceID
                     Log log = new Log(filename);
                     log.log(errorlog);
                     Environment.Exit(0);
-
-
-                    Environment.Exit(0);
+                    return;
                 }
              
             }
@@ -116,7 +114,7 @@ namespace FaceID
                 Log log = new Log(filename);
                 log.log(errorlog);
                 Environment.Exit(0);
-
+                return;
             }
 
             rectFaceMarker.Visibility = Visibility.Hidden;
@@ -150,8 +148,6 @@ namespace FaceID
             // Start the worker thread
             processingThread = new Thread(new ThreadStart(ProcessingThread));
             processingThread.Start();
-
-            
         }
         protected override void OnClosing(System.ComponentModel.CancelEventArgs e)
         {
@@ -212,9 +208,8 @@ namespace FaceID
                 Log log = new Log(filename);
                 log.log(errorlog);
                 Environment.Exit(0);
+                return;
             }
-          
-
             // Release resources
             faceConfig.Dispose();
             faceModule.Dispose();
@@ -222,13 +217,9 @@ namespace FaceID
 
         private  void ProcessingThread()
         {
-           
-
             // Start AcquireFrame/ReleaseFrame loop
             while (senseManager.AcquireFrame(true) >= pxcmStatus.PXCM_STATUS_NO_ERROR)
             {
-
-
                 if (newfaceID != "")
                 {
                     VerifyRequest(newfaceID, PersonGroupID, personId);
@@ -331,6 +322,7 @@ namespace FaceID
 
                             if (faces > 1)
                             {
+                                string errorfilename = UserPay + "\\" + string.Format("{0}.txt", 2);
                                 errorlog = errorlog + Environment.NewLine + phonenumber;
                                 errorlog = errorlog + Environment.NewLine + "isIdentical:";
                                 errorlog = errorlog + Environment.NewLine + "confidence:";
@@ -338,6 +330,9 @@ namespace FaceID
                                 errorlog = errorlog + Environment.NewLine + "PersonGroupID:" + PersonGroupID;
                                 errorlog = errorlog + Environment.NewLine + "personId:" + personId;
                                 errorlog = errorlog + Environment.NewLine + "Msg: " + string.Format("检测摄像头前有人数 RealSense:" + faces + "人，不支持人脸支付！");
+                                Log log = new Log(errorfilename);
+                                log.log(errorlog);
+                                Environment.Exit(0);
                                 return;
                             }
 
@@ -514,17 +509,9 @@ namespace FaceID
                         successlog = successlog + Environment.NewLine + "FacePayImages:" + UserPay + "\\PayUserImages\\" + newfaceID + ".jpg";
                         successlog = successlog + Environment.NewLine + "PersonGroupID:" + PersonGroupID;
                         successlog = successlog + Environment.NewLine + "personId:" + personId;
-                        successlog = successlog + Environment.NewLine + "Msg:" + "识别失败!";
-
+                        successlog = successlog + Environment.NewLine + "Msg:" + "识别成功!";
                 }
-                  
-               
-              
-
             }
-
-
-
         }
 
 
@@ -636,18 +623,6 @@ namespace FaceID
         {
             this.Left = -1920;
             this.Top = 0;
-            //var hwnd = new WindowInteropHelper(this).Handle;
-            //SetWindowLong(hwnd, GWL_STYLE, GetWindowLong(hwnd, GWL_STYLE) & ~WS_SYSMENU);
-
-            //// 设置全屏  
-            //this.WindowState = System.Windows.WindowState.Normal;
-            //this.WindowStyle = System.Windows.WindowStyle.None;
-            //this.ResizeMode = System.Windows.ResizeMode.NoResize;
-
-            //this.Left = 0.0;
-            //this.Top = 0.0;
-            //this.Width = System.Windows.SystemParameters.PrimaryScreenWidth;
-            //this.Height = System.Windows.SystemParameters.PrimaryScreenHeight;
         }
 
         private void ReleaseResources()
