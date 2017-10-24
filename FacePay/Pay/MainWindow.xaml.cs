@@ -391,8 +391,6 @@ namespace FaceID
         {
 
             count = count + 1;
-
-
             try
             {
                 var client = new HttpClient();
@@ -452,7 +450,7 @@ namespace FaceID
                 errorlog = errorlog + Environment.NewLine + "PersonGroupID:" + PersonGroupID;
                 errorlog = errorlog + Environment.NewLine + "personId:" + personId;
                 errorlog = errorlog + Environment.NewLine + "Msg: 生成 persistedFaceId 失败! " + ex.Message;
-                throw;
+               
             }
            
 
@@ -621,8 +619,8 @@ namespace FaceID
 
         private void Window_Loaded(object sender, RoutedEventArgs e)
         {
-            this.Left = -1920;
-            this.Top = 0;
+            //this.Left = -1920;
+            //this.Top = 0;
         }
 
         private void ReleaseResources()

@@ -14,3 +14,4 @@ C:\Clients\3 coodell\AIProject\AI\FacePay\FaceRegister\Register\obj\Debug\FaceRe
 C:\Clients\3 coodell\AIProject\AI\FacePay\FaceRegister\Register\obj\Debug\FaceID.exe
 C:\Clients\3 coodell\AIProject\AI\FacePay\FaceRegister\Register\obj\Debug\FaceID.pdb
 C:\Clients\3 coodell\AIProject\AI\FacePay\FaceRegister\Register\obj\Debug\FaceRegister.csprojResolveAssemblyReference.cache
+C:\Clients\3 coodell\AIProject\AI\FacePay\FaceRegister\Register\obj\Debug\FaceRegister.csproj.CoreCompileInputs.cache

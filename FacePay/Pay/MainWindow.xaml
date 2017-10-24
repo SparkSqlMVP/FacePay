@@ -5,7 +5,7 @@
         WindowStartupLocation="CenterScreen"
         Closing="Window_Closing" Height="1080"
         Background="#FF293955" Width="1920"  ResizeMode="NoResize" AllowsTransparency="True" WindowStyle="None"
-        Loaded="Window_Loaded"  Topmost="True" >
+        Loaded="Window_Loaded"  >
 
     <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
         <Label Content="人脸支付" FontSize="32" Foreground="White" Margin="5"/>
