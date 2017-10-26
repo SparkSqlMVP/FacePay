@@ -1031,7 +1031,7 @@ namespace DF_FaceTracking.cs
                          m_faceTextOrganizer.RectangleLocation.Width, m_faceTextOrganizer.RectangleLocation.Height);
                     facemap.Save(filefullname, System.Drawing.Imaging.ImageFormat.Bmp);
 
-                   // MakeDetectRequest(filefullname, face);
+                    MakeDetectRequest(filefullname, face);
 
                 }
 

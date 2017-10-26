@@ -389,7 +389,6 @@ namespace FaceID
 
         async void ProcessIMAGES(string imageFilePath)
         {
-
             count = count + 1;
             try
             {
@@ -397,7 +396,6 @@ namespace FaceID
                 // Request headers
                 client.DefaultRequestHeaders.Add("Ocp-Apim-Subscription-Key", "575223f6ffda4f03b73dc9c8a5cc4a29");
                 string queryString = "returnFaceId=true";// string.Format("userData={0}&targetFace={1}", "sample_list2", "2222222");
-
                 var uri = string.Format("https://southeastasia.api.cognitive.microsoft.com/face/v1.0/detect?") + queryString;
                 HttpResponseMessage response;
                 string responseContent;
@@ -409,7 +407,6 @@ namespace FaceID
                     response = await client.PostAsync(uri, content);
                     responseContent = response.Content.ReadAsStringAsync().Result;
                 }
-
                 if (response.StatusCode == System.Net.HttpStatusCode.OK)
                 {
                     if (responseContent != "[]")
@@ -428,16 +425,12 @@ namespace FaceID
                             FileInfo fi = new FileInfo(imageFilePath);
                             if (fi.Exists)
                             {
-
                                 if (!Directory.Exists(UserPay + "\\PayUserImages\\"))//如果不存在就创建file文件夹　　             　　                
                                     Directory.CreateDirectory(UserPay + "\\PayUserImages\\");//创建该文件夹　
                                 fi.MoveTo(UserPay + "\\PayUserImages\\" + newfaceID + ".jpg");
                             }
-                               
                         }
-
                     }
-
                 }
             }
             catch (Exception ex)
@@ -450,7 +443,6 @@ namespace FaceID
                 errorlog = errorlog + Environment.NewLine + "PersonGroupID:" + PersonGroupID;
                 errorlog = errorlog + Environment.NewLine + "personId:" + personId;
                 errorlog = errorlog + Environment.NewLine + "Msg: 生成 persistedFaceId 失败! " + ex.Message;
-               
             }
            
 

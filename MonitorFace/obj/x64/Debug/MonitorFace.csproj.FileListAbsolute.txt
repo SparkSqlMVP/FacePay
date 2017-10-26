@@ -11,4 +11,5 @@ C:\Clients\3 coodell\AIProject\AI\FacePay\MonitorFace\obj\x64\Debug\FaceTracking
 C:\Clients\3 coodell\AIProject\AI\FacePay\MonitorFace\obj\x64\Debug\MonitorFace.csproj.GenerateResource.Cache
 C:\Clients\3 coodell\AIProject\AI\FacePay\MonitorFace\obj\x64\Debug\FaceTracking.cs.exe
 C:\Clients\3 coodell\AIProject\AI\FacePay\MonitorFace\obj\x64\Debug\FaceTracking.cs.pdb
+C:\Clients\3 coodell\AIProject\AI\FacePay\MonitorFace\obj\x64\Debug\MonitorFace.csproj.CoreCompileInputs.cache
 C:\Clients\3 coodell\AIProject\AI\FacePay\MonitorFace\obj\x64\Debug\MonitorFace.csprojResolveAssemblyReference.cache
