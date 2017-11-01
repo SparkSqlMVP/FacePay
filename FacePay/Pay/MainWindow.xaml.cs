@@ -40,9 +40,7 @@ namespace FaceID
     {
 
         string UserPay = System.Configuration.ConfigurationManager.AppSettings["FacePay"];
-
         string PhoneFilename = System.Configuration.ConfigurationManager.AppSettings["phonefilename"];
-
         private Thread processingThread;
         private PXCMSenseManager senseManager;
         private PXCMFaceConfiguration.RecognitionConfiguration recognitionConfig;
@@ -58,10 +56,18 @@ namespace FaceID
         private int faceRectangleWidth;
         private int faceRectangleX;
         private int faceRectangleY;
-        public string PersonGroupID, personId, phonenumber, newfaceID="", filefullname = "";
+        public string PersonGroupID, personId, phonenumber, newfaceID = "",
+            filefullname = "", persistedFaceId = "", persistedFacelistId = "",
+            ResultpersistedFaceId = "";
 
-        string  successlog = "", errorlog = "", faillog = "";
-        int faces = 0, count = 0;
+        public List<string> userfaces = new List<string>();
+        public List<string> faceimages = new List<string>();
+        public List<string> isIdentical = new List<string>();
+    
+   
+        string successlog = "", errorlog = "", faillog = "";
+        int faces = 0, count = 0,Identify = -1;
+        double confidence = -1;
 
         private const int GWL_STYLE = -16;
         private const int WS_SYSMENU = 0x80000;
@@ -268,29 +274,22 @@ namespace FaceID
                         Environment.Exit(0);
                         return;
                     }
-
-
                 }
-
-
                 // Acquire the color image data
                 PXCMCapture.Sample sample = senseManager.QuerySample();
                 Bitmap colorBitmap;
                 PXCMImage.ImageData colorData;
                 sample.color.AcquireAccess(PXCMImage.Access.ACCESS_READ, PXCMImage.PixelFormat.PIXEL_FORMAT_RGB24, out colorData);
                 colorBitmap = colorData.ToBitmap(0, sample.color.info.width, sample.color.info.height);
-                
                 // Get face data
                 if (faceData != null)
                 {
                     faceData.Update();
                     numFacesDetected = faceData.QueryNumberOfDetectedFaces();
-
                     if (numFacesDetected > 0)
                     {
                         // Get the first face detected (index 0)
                         PXCMFaceData.Face face = faceData.QueryFaceByIndex(0);
-
                         // Retrieve face location data
                         PXCMFaceData.DetectionData faceDetectionData = face.QueryDetection();
                         if (faceDetectionData != null)
@@ -302,26 +301,76 @@ namespace FaceID
                             faceRectangleX = faceRectangle.x;
                             faceRectangleY = faceRectangle.y;
                         }
-
                         // Process face recognition data
                         if (face != null)
                         {
                             // Retrieve the recognition data instance
                             recognitionData = face.QueryRecognition();
                             // 请求微软接口,计算用户照片是否可用
-                            if (!Directory.Exists(UserPay + "\\Images\\"))//如果不存在就创建file文件夹　　             　　                
-                                Directory.CreateDirectory(UserPay + "\\Images\\");//创建该文件夹　
+                            if (!Directory.Exists(UserPay + "Images\\"))//如果不存在就创建file文件夹　　             　　                
+                                Directory.CreateDirectory(UserPay + "Images\\");//创建该文件夹　
                                                                                   //string imagefilename = System.Guid.NewGuid().ToString(); face.QueryUserID().ToString(CultureInfo.InvariantCulture)
-                            filefullname = UserPay + "\\Images\\" + string.Format("{0}.jpg",
+                            filefullname = UserPay + "Images\\" + string.Format("{0}.jpg",
                                 System.Guid.NewGuid().ToString());
 
                             if (!File.Exists(filefullname))
                             {
                                 colorBitmap.Save(filefullname, System.Drawing.Imaging.ImageFormat.Jpeg);
                             }
-
+                            // 多人的单独处理
                             if (faces > 1)
                             {
+                                if (count > 200)
+                                {
+                                    string networkfilename = UserPay + "\\" + string.Format("{0}.txt", 4);
+                                    errorlog = errorlog + Environment.NewLine + phonenumber;
+                                    errorlog = errorlog + Environment.NewLine + "isIdentical:";
+                                    errorlog = errorlog + Environment.NewLine + "confidence:";
+                                    errorlog = errorlog + Environment.NewLine + "FacePayImages:" + filefullname;
+                                    errorlog = errorlog + Environment.NewLine + "PersonGroupID:" + PersonGroupID;
+                                    errorlog = errorlog + Environment.NewLine + "personId:" + personId;
+                                    errorlog = errorlog + Environment.NewLine + "Msg: " + "(多人支付)网络异常请重试" + count.ToString();
+                                    Log log = new Log(networkfilename);
+                                    log.log(errorlog);
+                                    Environment.Exit(0);
+                                    return;
+                                }
+                                // 创建FacelistID
+                                CreateFacelist(filefullname);
+
+                                if (Identify > -1)
+                                {
+                                    string successfilename = UserPay + "\\" + string.Format("{0}.txt", 1);
+                                    successlog = successlog + Environment.NewLine + phonenumber;
+                                    successlog = successlog + Environment.NewLine + "isIdentical: True";
+                                    successlog = successlog + Environment.NewLine + "confidence:" + confidence.ToString();
+                                    successlog = successlog + Environment.NewLine + "FacePayImages:" + filefullname;
+                                    successlog = successlog + Environment.NewLine + "PersonGroupID:" + PersonGroupID;
+                                    successlog = successlog + Environment.NewLine + "personId:" + personId;
+                                    successlog = successlog + Environment.NewLine + "Msg:" + "识别成功!";
+                                    Log log = new Log(successfilename);
+                                    log.log(successlog);
+                                    Environment.Exit(0);
+                                    return;
+                                }
+                                if (Identify == -1)
+                                {
+                                    string failfilename = UserPay + "\\" + string.Format("{0}.txt", 0);
+                                    faillog = faillog + Environment.NewLine + phonenumber;
+                                    faillog = faillog + Environment.NewLine + "isIdentical: False";
+                                    faillog = faillog + Environment.NewLine + "confidence:" + confidence.ToString();
+                                    faillog = faillog + Environment.NewLine + "FacePayImages: " + filefullname;
+                                    faillog = faillog + Environment.NewLine + "PersonGroupID:" + PersonGroupID;
+                                    faillog = faillog + Environment.NewLine + "personId:" + personId;
+                                    faillog = faillog + Environment.NewLine + "Msg:" + "识别失败!(人数:"+ faces.ToString()+")";
+                                    Log log = new Log(failfilename);
+                                    log.log(faillog);
+                                    Environment.Exit(0);
+                                    return;
+                                }
+
+
+                                /**
                                 string errorfilename = UserPay + "\\" + string.Format("{0}.txt", 2);
                                 errorlog = errorlog + Environment.NewLine + phonenumber;
                                 errorlog = errorlog + Environment.NewLine + "isIdentical:";
@@ -334,20 +383,21 @@ namespace FaceID
                                 log.log(errorlog);
                                 Environment.Exit(0);
                                 return;
+                                **/
                             }
-
-                            lock (this)
-                            {
-                                if (newfaceID == "")
+                            // 单用户
+                            else {
+                                lock (this)
                                 {
-                                    ProcessIMAGES(filefullname);
+                                    if (newfaceID == "")
+                                    {
+                                        ProcessIMAGES(filefullname);
+                                    }
+
                                 }
-                              
                             }
 
-
-
-
+                           
                         }
                     }
                     else
@@ -373,19 +423,6 @@ namespace FaceID
         }
         
 
-        private List<string> SetUpImagesList()
-        {
-            List<string> images = new List<string>();
-
-            string pattern = "*.jpg";
-            string[] strFileName = Directory.GetFiles(UserPay + "\\Images\\", pattern);
-            foreach (var item in strFileName)
-            {
-                images.Add(item);
-            }
-
-            return images;
-        }
 
         async void ProcessIMAGES(string imageFilePath)
         {
@@ -439,21 +476,57 @@ namespace FaceID
                 errorlog = errorlog + Environment.NewLine + phonenumber;
                 errorlog = errorlog + Environment.NewLine + "isIdentical:";
                 errorlog = errorlog + Environment.NewLine + "confidence:";
-                errorlog = errorlog + Environment.NewLine + "FacePayImages:" + imageFilePath;
+                errorlog = errorlog + Environment.NewLine + "FacePayImages: " + imageFilePath + ".jpg";
                 errorlog = errorlog + Environment.NewLine + "PersonGroupID:" + PersonGroupID;
                 errorlog = errorlog + Environment.NewLine + "personId:" + personId;
-                errorlog = errorlog + Environment.NewLine + "Msg: 生成 persistedFaceId 失败! " + ex.Message;
+                errorlog = errorlog + Environment.NewLine + "Msg: 生成FaceId失败! " + ex.Message;
             }
            
 
         }
 
 
+        async void VerifyMultipleRequest(string newfaceID, string PersonGroupID, string personId)
+        {
+            count = count + 1;
+            var client = new HttpClient();
+            string queryString = string.Format("faceId={0}&personGroupId={1}&personId={2}",
+                newfaceID, PersonGroupID, personId);
+            // Request headers
+            client.DefaultRequestHeaders.Add("Ocp-Apim-Subscription-Key", "575223f6ffda4f03b73dc9c8a5cc4a29");
+            var uri = string.Format("https://southeastasia.api.cognitive.microsoft.com/face/v1.0/verify?") + queryString;
+            HttpResponseMessage response;
+            string responseContent;
+            // Request body
+
+            string value = "{\"faceId\":\"" + newfaceID + "\",\"personGroupId\":\"" + PersonGroupID + "\",\"personId\":\"" + personId + "\"}";
+
+            byte[] byteData = Encoding.UTF8.GetBytes(value);
+
+            using (var content = new ByteArrayContent(byteData))
+            {
+                content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
+                response = await client.PostAsync(uri, content);
+                responseContent = response.Content.ReadAsStringAsync().Result;
+            }
+
+            if (response.StatusCode == System.Net.HttpStatusCode.OK)
+            {
+                JObject joResponse = JObject.Parse(responseContent);
+                if (joResponse["isIdentical"].ToString() == "False")
+                {
+                    Identify += 0;
+                }
+                else
+                {
+                    Identify += 1;
+                }
+            }
+        }
 
 
         public async void VerifyRequest(string newfaceID, string PersonGroupID, string personId)
         {
-
 
             count = count + 1;
             var client = new HttpClient();
@@ -479,9 +552,7 @@ namespace FaceID
 
             if (response.StatusCode == System.Net.HttpStatusCode.OK)
             {
-
                     JObject joResponse = JObject.Parse(responseContent);
-
                     if (joResponse["isIdentical"].ToString()=="False") {
                         faillog = faillog + Environment.NewLine + phonenumber;
                         faillog = faillog + Environment.NewLine + "isIdentical:" + joResponse["isIdentical"].ToString();
@@ -504,6 +575,59 @@ namespace FaceID
             }
         }
 
+
+        private async void CreateFacelist(string multiplefaces)
+        {
+            count = count + 1;
+            try
+            {
+                var client = new HttpClient();
+                // Request headers
+                client.DefaultRequestHeaders.Add("Ocp-Apim-Subscription-Key", "575223f6ffda4f03b73dc9c8a5cc4a29");
+                var uri = string.Format("https://southeastasia.api.cognitive.microsoft.com/face/v1.0/detect?");
+                HttpResponseMessage response;
+                string responseContent;
+                // Request body
+                byte[] byteData = GetImageAsByteArray(multiplefaces);
+                using (var content = new ByteArrayContent(byteData))
+                {
+                    content.Headers.ContentType = new MediaTypeHeaderValue("application/octet-stream");
+                    response = await client.PostAsync(uri, content);
+                    responseContent = response.Content.ReadAsStringAsync().Result;
+                }
+                if (response.StatusCode == System.Net.HttpStatusCode.OK)
+                {
+                    JArray array = JArray.Parse(responseContent);
+                    if (array.Count > 1)
+                    {
+                        for (int i = 0; i < array.Count - 1; i++)
+                        {
+                            VerifyMultipleRequest(array[i]["faceId"].ToString(), PersonGroupID, personId);
+                        }
+                    }
+                    else {
+                        faillog = faillog + Environment.NewLine + phonenumber;
+                        faillog = faillog + Environment.NewLine + "isIdentical: ";
+                        faillog = faillog + Environment.NewLine + "confidence:";
+                        faillog = faillog + Environment.NewLine + "FacePayImages: " + UserPay + "\\PayUserImages\\" + multiplefaces + ".jpg";
+                        faillog = faillog + Environment.NewLine + "PersonGroupID:" + PersonGroupID;
+                        faillog = faillog + Environment.NewLine + "personId:" + personId;
+                        faillog = faillog + Environment.NewLine + "Msg:" + "未采集到图片!";
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Thread.Sleep(3000);
+                errorlog = errorlog + Environment.NewLine + "PersonGroupID:" + PersonGroupID.ToString();
+                errorlog = errorlog + Environment.NewLine + "personId:" + personId.ToString();
+                errorlog = errorlog + Environment.NewLine + "persistedFaceListId:" + persistedFacelistId.ToString();
+                errorlog = errorlog + Environment.NewLine + "UserRegisterImages:" + UserPay + "PayUserImages\\" + multiplefaces.ToString() + ".jpg";
+                errorlog = errorlog + Environment.NewLine + "Msg: 生成 persistedFaceListId 失败!" + ex.Message;
+                return;
+            }
+        }
+     
 
         static byte[] GetImageAsByteArray(string imageFilePath)
         {
@@ -611,8 +735,8 @@ namespace FaceID
 
         private void Window_Loaded(object sender, RoutedEventArgs e)
         {
-            //this.Left = -1920;
-            //this.Top = 0;
+            // this.Left = -1920;
+            this.Top = 0;
         }
 
         private void ReleaseResources()

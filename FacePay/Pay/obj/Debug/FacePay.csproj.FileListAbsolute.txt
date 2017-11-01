@@ -160,6 +160,6 @@ C:\Clients\3 coodell\AIProject\AI\FacePay\FacePay\Pay\obj\Debug\InputNumber.baml
 C:\Clients\3 coodell\AIProject\AI\FacePay\FacePay\Pay\obj\Debug\FaceID.g.resources
 C:\Clients\3 coodell\AIProject\AI\FacePay\FacePay\Pay\obj\Debug\FaceID.Properties.Resources.resources
 C:\Clients\3 coodell\AIProject\AI\FacePay\FacePay\Pay\obj\Debug\FacePay.csproj.GenerateResource.Cache
+C:\Clients\3 coodell\AIProject\AI\FacePay\FacePay\Pay\obj\Debug\FacePay.csproj.CoreCompileInputs.cache
 C:\Clients\3 coodell\AIProject\AI\FacePay\FacePay\Pay\obj\Debug\FaceID.exe
 C:\Clients\3 coodell\AIProject\AI\FacePay\FacePay\Pay\obj\Debug\FaceID.pdb
-C:\Clients\3 coodell\AIProject\AI\FacePay\FacePay\Pay\obj\Debug\FacePay.csproj.CoreCompileInputs.cache
